@@ -49,7 +49,7 @@ contract Optonism is IOptionism {
     function claimOption(uint256 id) public {
     
     }
-
+    
     function getArrayChunk(uint startIndex, uint endIndex) public view returns(uint[] memory optionIDs, uint[] memory expiries, bytes32[] memory priceIds) {
         if (endIndex > optionsArray.length - 1) {
             endIndex = optionsArray.length - 1;
