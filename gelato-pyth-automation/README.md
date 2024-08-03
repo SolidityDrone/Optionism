@@ -1,3 +1,13 @@
+# how to use
+```
+npm install
+```
+
+```
+npx w3f test web3-functions/pyth-rwa-drone/index.ts --logs
+
+```
+
 
 # Gelato Web3 functions <<-->> Pyth PoC
 Gelato Web3 Functions together with Pyth offer the ability to create fine-tuned customized oracles pushing prices on-chain following predefined logic within the Web3 Function and verifying prices on-chain through the Pyth network.
