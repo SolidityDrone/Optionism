@@ -3,24 +3,35 @@ pragma solidity ^0.8.24;
 import './interfaces/IOptionism.sol';
 import "@pythnetwork/pyth-sdk-solidity/IPyth.sol";
 import "@pythnetwork/pyth-sdk-solidity/PythStructs.sol";
- 
-
-contract Optonism is IOptionism {
+import "@openzeppelin/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/token/ERC20/IERC20.sol";
+contract Optionism is IOptionism, ERC1155 {
     
-    mapping(uint256 => Option) public options;
+    mapping(uint256 => IOptionism.Option) public options;
     mapping(uint => bool) public exhaustedArrays;
-
+    mapping(uint => uint) public results;
     // Storage variables
-    address contractAddress = 0xA2aa501b19aff244D90cc15a4Cf739D2725B5729; // pyth address
+
     IPyth pyth = IPyth(contractAddress);    
-    address public usdcAddress = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913; // sepolia
-    uint256[] public activeOptions;
-
-
     
+    uint256[] public optionsArray;
+    uint internal counter;
+    address internal gelatoAddress;
+    address public usdcAddress; 
+    address contractAddress = 0xA2aa501b19aff244D90cc15a4Cf739D2725B5729; // pyth address
+    IERC20 usdc;
 
-    constructor(){}
+    constructor(address _gelatoAddress)ERC1155(""){
+        usdcAddress = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913; // sepolia
+        usdc = IERC20(usdcAddress);
+        gelatoAddress = _gelatoAddress;
+    }
 
+    modifier onlyGelato(){
+        if (msg.sender != gelatoAddress)
+        revert NotGelato();
+        _;
+    }
 
     function createOption(
         bool isCallOption,
@@ -28,27 +39,56 @@ contract Optonism is IOptionism {
         uint256 strikePrice,
         uint256 buyExpiry,
         uint256 optionExpiry,
-        uint256 assetID,
+        bytes32 assetID,
         uint256 shares,
         uint256 maximumPayoutPerShare
-    ) public {
-      
+    ) public {  
+        ++counter;
+        require(buyExpiry < optionExpiry && buyExpiry > block.timestamp);
+
+        usdc.transferFrom(msg.sender, address(this), shares*maximumPayoutPerShare);
+
+        options[counter] = Option(
+            msg.sender,
+            optionExpiry, 
+            premiumUsdcPrice, 
+            strikePrice, 
+            buyExpiry, 
+            shares, 
+            maximumPayoutPerShare, 
+            0, 
+            assetID, 
+            isCallOption, 
+            false 
+        );
+        emit OptionCreated(msg.sender, counter, optionExpiry, premiumUsdcPrice, strikePrice, buyExpiry, shares, maximumPayoutPerShare);
     }
 
     function buyOption(
         uint id,
         uint amountOfShares
     ) public {
+        Option memory option = options[id];
+        uint remainingShares = option.shares - option.sharesEmitted;
+        uint finalAmountOfShares = amountOfShares;
+        if (amountOfShares > remainingShares){
+            finalAmountOfShares = remainingShares;
+        }
+        _mint(msg.sender, id, amountOfShares, "");
+        uint amountToPay = finalAmountOfShares * option.premiumUsdcPrice;
+        usdc.transferFrom(msg.sender, address(this), amountToPay);
 
+        emit OptionSubscribed(msg.sender, id, finalAmountOfShares, amountToPay);
     }
 
     function deleteOption(uint256 id) public {
-
+        // to do
     }
 
     function claimOption(uint256 id) public {
-    
+        
     }
+
     
     function getArrayChunk(uint startIndex, uint endIndex) public view returns(uint[] memory optionIDs, uint[] memory expiries, bytes32[] memory priceIds) {
         if (endIndex > optionsArray.length - 1) {
@@ -60,17 +100,28 @@ contract Optonism is IOptionism {
         priceIds = new bytes32[](length);
         optionIDs = new uint[](length);
         for (uint i = startIndex; i < endIndex; i++) {
-            if (optionsArray[i].isActive){
-                expiries[j] = optionsArray[i].optionExpiry;
-                priceIds[j] = optionsArray[i].assetID;
+            Option memory currOption = options[optionsArray[i]];
+            if (currOption.isActive){
+                expiries[j] = currOption.optionExpiry;
+                priceIds[j] = currOption.assetID;
+                optionIDs[j] = optionsArray[i];
             }
             j++;
         }
         return (optionIDs, expiries, priceIds);
     }
 
-    function gelatoCallBack(bytes[] memory gelato) external {
 
+    function gelatoCallBack(bytes[] memory gelato) external /* onlyGelato() */ {
+        // Arrays to store decoded data
+        uint[] memory optionIds = new uint[](gelato.length);
+        bytes32[] memory priceIds = new bytes32[](gelato.length);
+        uint[] memory prices = new uint[](gelato.length);
+
+        // Decode each element of the `gelato` array
+        for (uint i = 0; i < gelato.length; i++) {
+            (optionIds[i], priceIds[i], prices[i]) = abi.decode(gelato[i], (uint, bytes32, uint));
+        }
     }
     
 }

@@ -12,11 +12,35 @@ interface IOptionism {
         uint256 shares;
         uint256 maxiumPayoutPerShare;
         uint256 sharesEmitted;
-        uint256 sharesPrice;
-        uint256 assetID;
+        bytes32 assetID;
         bool    isCallOption;
         bool    isActive;
     }
 
-    // errors here 
+    event OptionCreated(
+        address indexed writer,
+        uint optionId,
+        uint optionExpiry,
+        uint premiumUsdcPrice,
+        uint strikePrice,
+        uint buyExpiry,
+        uint shares,
+        uint maximumPayoutPerShare
+    );
+
+    event OptionSubscribed(
+        address indexed buyer,
+        uint optionId,
+        uint purchasedShares,
+        uint totalPaid
+    );
+
+    event OptionClaim(
+        address indexed buyer,
+        uint optionId
+    );
+
+    // errors
+
+    error NotGelato();
 }
