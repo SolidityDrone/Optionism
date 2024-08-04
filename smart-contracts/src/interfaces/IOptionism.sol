@@ -43,7 +43,8 @@ interface IOptionism {
 
     event OptionResolved(
         uint optionId,
-        uint finalPrice
+        uint finalPrice,
+        bool hasToPay
     );
     // errors
 

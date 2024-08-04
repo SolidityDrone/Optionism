@@ -1,0 +1,30 @@
+specVersion: 1.0.0
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: optionism
+    network: base-sepolia
+    source:
+      address: "0xD8c24B4110E44AE820DB81205591C46BA56124F4"
+      abi: optionism
+      startBlock: 13489788
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Option
+      abis:
+        - name: optionism
+          file: ./abis/optionism.json
+      eventHandlers:
+        - event: OptionCreated(indexed address,uint256,uint256,uint256,uint256,uint256,uint256,uint256)
+          handler: handleOptionCreated
+        - event: OptionSubscribed(indexed address,uint256,uint256,uint256)
+          handler: handleOptionSubscribed
+        - event: OptionClaim(indexed address,uint256)
+          handler: handleOptionClaim
+        - event: OptionResolved(uint256,uint256,bool)
+          handler: handleOptionResolved
+      file: ./src/optionism.ts
