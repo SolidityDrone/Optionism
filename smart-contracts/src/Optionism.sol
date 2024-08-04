@@ -59,7 +59,8 @@ contract Optionism is IOptionism, ERC1155 {
             0, 
             assetID, 
             isCallOption, 
-            false 
+            false,
+            false
         );
         emit OptionCreated(msg.sender, counter, optionExpiry, premiumUsdcPrice, strikePrice, buyExpiry, shares, maximumPayoutPerShare);
     }
@@ -85,8 +86,16 @@ contract Optionism is IOptionism, ERC1155 {
         // to do
     }
 
-    function claimOption(uint256 id) public {
-        
+    function claimOptionWin(uint256 id) public {
+        Option memory option = options[id];
+        bool isCall = option.isCallOption;
+        require(option.hasToPay, "");
+        uint finalGainPerShare;
+        isCall ? finalGainPerShare = (results[id] - option.strikePrice) : (option.strikePrice - results[id]);
+        finalGainPerShare > option.maxiumPayoutPerShare ? finalGainPerShare = option.maxiumPayoutPerShare : finalGainPerShare;
+        uint claimableUsdc = balanceOf(msg.sender, id) * finalGainPerShare;
+
+        usdc.transferFrom(address(this), msg.sender, claimableUsdc);
     }
 
     
@@ -118,10 +127,31 @@ contract Optionism is IOptionism, ERC1155 {
         bytes32[] memory priceIds = new bytes32[](gelato.length);
         uint[] memory prices = new uint[](gelato.length);
 
+      
+        // TODO Update price from pyth and pay fee
+
+        Option memory op;
+        bool toPay;
         // Decode each element of the `gelato` array
         for (uint i = 0; i < gelato.length; i++) {
             (optionIds[i], priceIds[i], prices[i]) = abi.decode(gelato[i], (uint, bytes32, uint));
+            op = options[optionIds[i]];
+            results[optionIds[i]] = prices[i];
+            if (op.isCallOption){
+                prices[i] > op.strikePrice ? toPay = true : false;
+            } else{
+                prices[i] < op.strikePrice ? toPay = true : false;
+            }
+            options[optionIds[i]].hasToPay = toPay;
+            if (!toPay){
+                uint writersReturn = op.shares * op.maxiumPayoutPerShare;
+                usdc.transfer(op.writer, writersReturn);
+            } 
+          
+            emit OptionResolved(optionIds[i], prices[i]);
         }
-    }
-    
+    }  
 }
+    
+    
+

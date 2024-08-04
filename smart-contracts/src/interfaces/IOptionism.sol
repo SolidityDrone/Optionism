@@ -15,6 +15,7 @@ interface IOptionism {
         bytes32 assetID;
         bool    isCallOption;
         bool    isActive;
+        bool    hasToPay;
     }
 
     event OptionCreated(
@@ -40,6 +41,10 @@ interface IOptionism {
         uint optionId
     );
 
+    event OptionResolved(
+        uint optionId,
+        uint finalPrice
+    );
     // errors
 
     error NotGelato();
