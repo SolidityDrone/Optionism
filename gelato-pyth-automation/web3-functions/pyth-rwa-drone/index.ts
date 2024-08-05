@@ -5,9 +5,12 @@ import {
 import { Contract, utils, BigNumber, BytesLike } from "ethers";
 import { EvmPriceServiceConnection } from "@pythnetwork/pyth-evm-js";
 import { optionismAbi } from "./optionismAbi";
+import axios from 'axios';
 
-
-
+interface IPRICE {
+  price: number;
+  timestamp: number;
+}
 Web3Function.onRun(async (context: Web3FunctionContext) => {
   const { userArgs, storage, secrets, multiChainProvider } = context;
 
@@ -26,7 +29,7 @@ Web3Function.onRun(async (context: Web3FunctionContext) => {
   const parsedAwaitingArray = storageAwaitingValue ? storageAwaitingValue.split(",").map(Number) : [];
 
   // Call getArrayChunk function on the contract
-  const chunk = await optionismContract.getArrayChunk(0, 10);
+  const chunk = await optionismContract.getArrayChunk(1, 3);
 
   // Destructure the response to get the arrays
   const [retrievedOptionIds, retrievedExpiries, retrievedPriceIds] = chunk;
@@ -64,19 +67,29 @@ Web3Function.onRun(async (context: Web3FunctionContext) => {
   // Logging for debugging
   console.log("Updated Awaiting value:", newStorageAwaitingValue);
   console.log("Filtered Option IDs for processing:", validOptionIdsArray);
-    // Initialize connection to Pyth
-    const connection = new EvmPriceServiceConnection(
-      "https://hermes-beta.pyth.network"
-    );
-    // const mockPriceId = "0xca80ba6dc32e08d06f1aa886011eed1d77c77be9eb761cc10d72b7d0a2fd57a6";
-    // const mockArray = new Array(validPriceIdsArray.length).fill(mockPriceId);
-    
-    // Fetch the latest prices for expired priceIds
-    const priceFeeds = (await connection.getPriceFeedsUpdateData(validPriceIdsArray));
+
+  const mockPriceId = "0x9695e2b96ea7b3859da9ed25b7a46a920a776e2fdae19a7bcfdf2b219230452d";
+const mockArray = new Array(validPriceIdsArray.length).fill(mockPriceId);
+
+console.log(validPriceIdsArray);
+
+// Construct the URL with the price IDs
+const baseURL = "https://hermes.pyth.network/v2/updates/price/latest";
+const idsQueryString = mockArray.map(id => `ids%5B%5D=${id}`).join("&");
+const url = `${baseURL}?${idsQueryString}`;
 
 
+const response = await axios.get(url);
+const priceFeeds = response.data.binary.data;
 
-    
+// Add "0x" to each entry if it doesn't already have it
+const formattedPriceFeeds = priceFeeds.map((feed: string) => {
+    // Check if the entry starts with "0x", if not, add it
+    return feed.startsWith("0x") ? feed : `0x${feed}`;
+});
+
+// Now formattedPriceFeeds contains each entry prefixed with "0x"
+console.log(formattedPriceFeeds);
   // Step 1: Parse the awaiting value from storage
   const existingAwaitingValue = await storage.get("awaiting");
   const awaitingArray = existingAwaitingValue ? existingAwaitingValue.split(",").map(Number) : [];
@@ -116,7 +129,7 @@ Web3Function.onRun(async (context: Web3FunctionContext) => {
 
   // Encode the optionId, priceId, and priceResult
   const encodedItems = optionIdsToEncode.map((optionId: number, index: number) => {
-
+  
 
   // Encode optionId, priceId, and priceResult
   return utils.defaultAbiCoder.encode(
@@ -125,17 +138,10 @@ Web3Function.onRun(async (context: Web3FunctionContext) => {
   );
   });
 
-  // Logging for debugging
-  console.log("Encoded Items Count:", encodedItems);
 
-  // Prepare the calldata for the contract function
-  const iface = new utils.Interface([
-  "function gelatoCallBack(uint[] memory optionIds, bytes[] memory pythUpdate) external",
-  ]);
-
-  const callData = iface.encodeFunctionData("gelatoCallBack", [
+  const callData = optionismContract.interface.encodeFunctionData("gelatoCallBack", [
     optionIdsToEncode,
-    priceFeeds 
+    formattedPriceFeeds,
   ]);
 
   if (encodedItems.length != 0) {

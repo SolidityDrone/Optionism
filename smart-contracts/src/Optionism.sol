@@ -6,23 +6,26 @@ import "@pythnetwork/pyth-sdk-solidity/PythStructs.sol";
 import "@openzeppelin/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/token/ERC20/IERC20.sol";
 contract Optionism is IOptionism, ERC1155 {
-    
+
+    receive() external payable {}
+
     mapping(uint256 => IOptionism.Option) public options;
     mapping(uint => bool) public exhaustedArrays;
     mapping(uint => uint) public results;
     // Storage variables
 
-    IPyth pyth = IPyth(contractAddress);    
+    IPyth pyth;  
     
     uint256[] public optionsArray;
     uint internal counter;
     address internal gelatoAddress;
     address public usdcAddress; 
-    address contractAddress = 0xA2aa501b19aff244D90cc15a4Cf739D2725B5729; // pyth address
+    
     IERC20 usdc;
 
     constructor(address _gelatoAddress)ERC1155(""){
         usdcAddress = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913; // sepolia
+        pyth = IPyth(0xA2aa501b19aff244D90cc15a4Cf739D2725B5729); // pyth address
         usdc = IERC20(usdcAddress);
         gelatoAddress = _gelatoAddress;
     }
@@ -78,7 +81,10 @@ contract Optionism is IOptionism, ERC1155 {
         _mint(msg.sender, id, amountOfShares, "");
         uint amountToPay = finalAmountOfShares * option.premiumUsdcPrice;
         usdc.transferFrom(msg.sender, address(this), amountToPay);
-
+        if (option.sharesEmitted > 0){
+            optionsArray.push(id);
+        }
+        options[id].isActive = true;
         emit OptionSubscribed(msg.sender, id, finalAmountOfShares, amountToPay);
     }
 
@@ -121,28 +127,62 @@ contract Optionism is IOptionism, ERC1155 {
         }
         return (optionIDs, expiries, priceIds);
     }
+ // Function arguments are invalid (e.g., the arguments lengths mismatch)
+    error InvalidArgument();
+    // Update data is coming from an invalid data source.
+    error InvalidUpdateDataSource();
+    // Update data is invalid (e.g., deserialization error)
+    error InvalidUpdateData();
+    // Insufficient fee is paid to the method.
+    error InsufficientFee();
+    // There is no fresh update, whereas expected fresh updates.
+    error NoFreshUpdate();
+    // There is no price feed found within the given range or it does not exists.
+    error PriceFeedNotFoundWithinRange();
+    // Price feed not found or it is not pushed on-chain yet.
+    error PriceFeedNotFound();
+    // Requested price is stale.
+    error StalePrice();
+    // Given message is not a valid Wormhole VAA.
+    error InvalidWormholeVaa();
+    // Governance message is invalid (e.g., deserialization error).
+    error InvalidGovernanceMessage();
+    // Governance message is not for this contract.
+    error InvalidGovernanceTarget();
+    // Governance message is coming from an invalid data source.
+    error InvalidGovernanceDataSource();
+    // Governance message is old.
+    error OldGovernanceMessage();
 
 
-    function gelatoCallBack(bytes[] memory gelato) external /* onlyGelato() */ {
+    function gelatoCallBack(uint[] memory optionIds, bytes[] memory pythUpdate) external /* onlyGelato() */ {
         // Arrays to store decoded data
-        uint[] memory optionIds = new uint[](gelato.length);
-        bytes32[] memory priceIds = new bytes32[](gelato.length);
-        uint[] memory prices = new uint[](gelato.length);
-
-      
-        // TODO Update price from pyth and pay fee
+        uint updateFee = pyth.getUpdateFee(pythUpdate);
+        pyth.updatePriceFeeds{ value: updateFee }(pythUpdate);
+        
 
         Option memory op;
         bool toPay;
-        // Decode each element of the `gelato` array
-        for (uint i = 0; i < gelato.length; i++) {
-            (optionIds[i], priceIds[i], prices[i]) = abi.decode(gelato[i], (uint, bytes32, uint));
+        uint[] memory prices = new uint[](optionIds.length);
+       
+        PythStructs.Price memory price;
+        for (uint i = 0; i < optionIds.length; i++) {
+     
             op = options[optionIds[i]];
-            results[optionIds[i]] = prices[i];
+          
+
+        try pyth.getPrice(op.assetID) returns (PythStructs.Price memory _price) {
+            // If getPrice succeeds, use the returned price
+            price = _price;
+        } catch {
+            // If getPrice reverts, use getPriceUnsafe
+            price = pyth.getPriceUnsafe(op.assetID);
+        }
+            results[optionIds[i]] = uint64(price.price);
             if (op.isCallOption){
-                prices[i] > op.strikePrice ? toPay = true : false;
+                uint64(price.price) > op.strikePrice ? toPay = true : false;
             } else{
-                prices[i] < op.strikePrice ? toPay = true : false;
+                uint64(price.price) < op.strikePrice ? toPay = true : false;
             }
             options[optionIds[i]].hasToPay = toPay;
             if (!toPay){
@@ -152,7 +192,10 @@ contract Optionism is IOptionism, ERC1155 {
           
             emit OptionResolved(optionIds[i], prices[i], toPay);
         }
+
+    
     }  
+
 }
     
     
