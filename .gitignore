@@ -2,3 +2,6 @@ goldsky-subgraph/node_modules/
 
 .vscode/
 
+frontend/app/node_modules/
+
+frontend/app/.env
