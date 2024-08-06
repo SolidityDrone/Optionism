@@ -102,7 +102,7 @@ contract Optionism is IOptionism, ERC1155 {
         uint claimableUsdc = balanceOf(msg.sender, id) * finalGainPerShare;
 
         usdc.transfer(msg.sender, claimableUsdc);
-
+        _burn(msg.sender, id, balanceOf(msg.sender, id));
         emit OptionClaim(msg.sender, id);
     }
 

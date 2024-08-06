@@ -9,7 +9,7 @@ interface Asset {
   symbol: string;
 }
 
-export default function Market() {
+export default function Sidebar() {
   const [commodities, setCommodities] = useState<Asset[]>([]);
   const [equity, setEquity] = useState<Asset[]>([]);
   const [crypto, setCrypto] = useState<Asset[]>([]);
