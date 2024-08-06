@@ -2,6 +2,98 @@ export const optionismAbi = [
 	{
 		"inputs": [
 			{
+				"internalType": "uint256",
+				"name": "id",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amountOfShares",
+				"type": "uint256"
+			}
+		],
+		"name": "buyOption",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "id",
+				"type": "uint256"
+			}
+		],
+		"name": "claimOptionWin",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bool",
+				"name": "isCallOption",
+				"type": "bool"
+			},
+			{
+				"internalType": "uint256",
+				"name": "premiumUsdcPrice",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "strikePrice",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "buyExpiry",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "optionExpiry",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bytes32",
+				"name": "assetID",
+				"type": "bytes32"
+			},
+			{
+				"internalType": "uint256",
+				"name": "shares",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "maximumPayoutPerShare",
+				"type": "uint256"
+			}
+		],
+		"name": "createOption",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "id",
+				"type": "uint256"
+			}
+		],
+		"name": "deleteOption",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
 				"internalType": "address",
 				"name": "_gelatoAddress",
 				"type": "address"
@@ -113,8 +205,91 @@ export const optionismAbi = [
 		"type": "error"
 	},
 	{
+		"inputs": [
+			{
+				"internalType": "uint256[]",
+				"name": "optionIds",
+				"type": "uint256[]"
+			},
+			{
+				"internalType": "bytes[]",
+				"name": "pythUpdate",
+				"type": "bytes[]"
+			}
+		],
+		"name": "gelatoCallBack",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "InsufficientFee",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "InvalidArgument",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "InvalidGovernanceDataSource",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "InvalidGovernanceMessage",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "InvalidGovernanceTarget",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "InvalidUpdateData",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "InvalidUpdateDataSource",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "InvalidWormholeVaa",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "NoFreshUpdate",
+		"type": "error"
+	},
+	{
 		"inputs": [],
 		"name": "NotGelato",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "OldGovernanceMessage",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "PriceFeedNotFound",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "PriceFeedNotFoundWithinRange",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "StalePrice",
 		"type": "error"
 	},
 	{
@@ -273,6 +448,90 @@ export const optionismAbi = [
 		"type": "event"
 	},
 	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "from",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "to",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256[]",
+				"name": "ids",
+				"type": "uint256[]"
+			},
+			{
+				"internalType": "uint256[]",
+				"name": "values",
+				"type": "uint256[]"
+			},
+			{
+				"internalType": "bytes",
+				"name": "data",
+				"type": "bytes"
+			}
+		],
+		"name": "safeBatchTransferFrom",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "from",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "to",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "id",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "value",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bytes",
+				"name": "data",
+				"type": "bytes"
+			}
+		],
+		"name": "safeTransferFrom",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "operator",
+				"type": "address"
+			},
+			{
+				"internalType": "bool",
+				"name": "approved",
+				"type": "bool"
+			}
+		],
+		"name": "setApprovalForAll",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
 		"anonymous": false,
 		"inputs": [
 			{
@@ -366,6 +625,10 @@ export const optionismAbi = [
 		"type": "event"
 	},
 	{
+		"stateMutability": "payable",
+		"type": "receive"
+	},
+	{
 		"inputs": [
 			{
 				"internalType": "address",
@@ -417,98 +680,6 @@ export const optionismAbi = [
 		"inputs": [
 			{
 				"internalType": "uint256",
-				"name": "id",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "amountOfShares",
-				"type": "uint256"
-			}
-		],
-		"name": "buyOption",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "id",
-				"type": "uint256"
-			}
-		],
-		"name": "claimOptionWin",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "bool",
-				"name": "isCallOption",
-				"type": "bool"
-			},
-			{
-				"internalType": "uint256",
-				"name": "premiumUsdcPrice",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "strikePrice",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "buyExpiry",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "optionExpiry",
-				"type": "uint256"
-			},
-			{
-				"internalType": "bytes32",
-				"name": "assetID",
-				"type": "bytes32"
-			},
-			{
-				"internalType": "uint256",
-				"name": "shares",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "maximumPayoutPerShare",
-				"type": "uint256"
-			}
-		],
-		"name": "createOption",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "id",
-				"type": "uint256"
-			}
-		],
-		"name": "deleteOption",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
 				"name": "",
 				"type": "uint256"
 			}
@@ -522,24 +693,6 @@ export const optionismAbi = [
 			}
 		],
 		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256[]",
-				"name": "optionIds",
-				"type": "uint256[]"
-			},
-			{
-				"internalType": "bytes[]",
-				"name": "pythUpdate",
-				"type": "bytes[]"
-			}
-		],
-		"name": "gelatoCallBack",
-		"outputs": [],
-		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -710,90 +863,6 @@ export const optionismAbi = [
 			}
 		],
 		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "from",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "to",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256[]",
-				"name": "ids",
-				"type": "uint256[]"
-			},
-			{
-				"internalType": "uint256[]",
-				"name": "values",
-				"type": "uint256[]"
-			},
-			{
-				"internalType": "bytes",
-				"name": "data",
-				"type": "bytes"
-			}
-		],
-		"name": "safeBatchTransferFrom",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "from",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "to",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "id",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "value",
-				"type": "uint256"
-			},
-			{
-				"internalType": "bytes",
-				"name": "data",
-				"type": "bytes"
-			}
-		],
-		"name": "safeTransferFrom",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "operator",
-				"type": "address"
-			},
-			{
-				"internalType": "bool",
-				"name": "approved",
-				"type": "bool"
-			}
-		],
-		"name": "setApprovalForAll",
-		"outputs": [],
-		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{

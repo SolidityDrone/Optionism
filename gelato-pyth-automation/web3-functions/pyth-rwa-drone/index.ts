@@ -29,7 +29,7 @@ Web3Function.onRun(async (context: Web3FunctionContext) => {
   const parsedAwaitingArray = storageAwaitingValue ? storageAwaitingValue.split(",").map(Number) : [];
 
   // Call getArrayChunk function on the contract
-  const chunk = await optionismContract.getArrayChunk(1, 3);
+  const chunk = await optionismContract.getArrayChunk(1, 100);
 
   // Destructure the response to get the arrays
   const [retrievedOptionIds, retrievedExpiries, retrievedPriceIds] = chunk;
@@ -68,17 +68,18 @@ Web3Function.onRun(async (context: Web3FunctionContext) => {
   console.log("Updated Awaiting value:", newStorageAwaitingValue);
   console.log("Filtered Option IDs for processing:", validOptionIdsArray);
 
-  const mockPriceId = "0x9695e2b96ea7b3859da9ed25b7a46a920a776e2fdae19a7bcfdf2b219230452d";
+const mockPriceId = "0x9695e2b96ea7b3859da9ed25b7a46a920a776e2fdae19a7bcfdf2b219230452d";
 const mockArray = new Array(validPriceIdsArray.length).fill(mockPriceId);
 
-console.log(validPriceIdsArray);
+console.log(chunkPriceIdsArray);
 
 // Construct the URL with the price IDs
 const baseURL = "https://hermes.pyth.network/v2/updates/price/latest";
 const idsQueryString = mockArray.map(id => `ids%5B%5D=${id}`).join("&");
 const url = `${baseURL}?${idsQueryString}`;
 
-
+console.log("Query String:", idsQueryString);
+console.log("Final URL:", url);
 const response = await axios.get(url);
 const priceFeeds = response.data.binary.data;
 
