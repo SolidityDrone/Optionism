@@ -53,28 +53,32 @@ export class OptionCreated__Params {
     return this._event.parameters[1].value.toBigInt();
   }
 
-  get optionExpiry(): BigInt {
-    return this._event.parameters[2].value.toBigInt();
+  get isCall(): boolean {
+    return this._event.parameters[2].value.toBoolean();
   }
 
-  get premiumUsdcPrice(): BigInt {
+  get optionExpiry(): BigInt {
     return this._event.parameters[3].value.toBigInt();
   }
 
-  get strikePrice(): BigInt {
+  get premiumUsdcPrice(): BigInt {
     return this._event.parameters[4].value.toBigInt();
   }
 
-  get buyExpiry(): BigInt {
+  get strikePrice(): BigInt {
     return this._event.parameters[5].value.toBigInt();
   }
 
-  get shares(): BigInt {
+  get buyExpiry(): BigInt {
     return this._event.parameters[6].value.toBigInt();
   }
 
-  get maximumPayoutPerShare(): BigInt {
+  get shares(): BigInt {
     return this._event.parameters[7].value.toBigInt();
+  }
+
+  get maximumPayoutPerShare(): BigInt {
+    return this._event.parameters[8].value.toBigInt();
   }
 }
 
@@ -131,6 +135,40 @@ export class OptionSubscribed__Params {
 
   get totalPaid(): BigInt {
     return this._event.parameters[3].value.toBigInt();
+  }
+}
+
+export class TransferSingle extends ethereum.Event {
+  get params(): TransferSingle__Params {
+    return new TransferSingle__Params(this);
+  }
+}
+
+export class TransferSingle__Params {
+  _event: TransferSingle;
+
+  constructor(event: TransferSingle) {
+    this._event = event;
+  }
+
+  get operator(): Address {
+    return this._event.parameters[0].value.toAddress();
+  }
+
+  get from(): Address {
+    return this._event.parameters[1].value.toAddress();
+  }
+
+  get to(): Address {
+    return this._event.parameters[2].value.toAddress();
+  }
+
+  get id(): BigInt {
+    return this._event.parameters[3].value.toBigInt();
+  }
+
+  get value(): BigInt {
+    return this._event.parameters[4].value.toBigInt();
   }
 }
 

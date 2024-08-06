@@ -920,6 +920,7 @@ interface IOptionism {
     event OptionCreated(
         address indexed writer,
         uint optionId,
+        bool isCall,
         uint optionExpiry,
         uint premiumUsdcPrice,
         uint strikePrice,
@@ -1923,7 +1924,6 @@ contract Optionism is IOptionism, ERC1155 {
     receive() external payable {}
 
     mapping(uint256 => IOptionism.Option) public options;
-    mapping(uint => bool) public exhaustedArrays;
     mapping(uint => uint) public results;
     // Storage variables
 
@@ -1937,7 +1937,7 @@ contract Optionism is IOptionism, ERC1155 {
     IERC20 usdc;
 
     constructor(address _gelatoAddress)ERC1155(""){
-        usdcAddress = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913; // sepolia
+        usdcAddress = 0x036CbD53842c5426634e7929541eC2318f3dCF7e; // sepolia usdc
         pyth = IPyth(0xA2aa501b19aff244D90cc15a4Cf739D2725B5729); // pyth address
         usdc = IERC20(usdcAddress);
         gelatoAddress = _gelatoAddress;
@@ -1978,7 +1978,7 @@ contract Optionism is IOptionism, ERC1155 {
             false,
             false
         );
-        emit OptionCreated(msg.sender, counter, optionExpiry, premiumUsdcPrice, strikePrice, buyExpiry, shares, maximumPayoutPerShare);
+        emit OptionCreated(msg.sender, counter, isCallOption, optionExpiry, premiumUsdcPrice, strikePrice, buyExpiry, shares, maximumPayoutPerShare);
     }
 
     function buyOption(
@@ -1994,7 +1994,7 @@ contract Optionism is IOptionism, ERC1155 {
         _mint(msg.sender, id, amountOfShares, "");
         uint amountToPay = finalAmountOfShares * option.premiumUsdcPrice;
         usdc.transferFrom(msg.sender, address(this), amountToPay);
-        if (option.sharesEmitted > 0){
+        if (option.sharesEmitted == 0){
             optionsArray.push(id);
         }
         options[id].isActive = true;
@@ -2040,44 +2040,45 @@ contract Optionism is IOptionism, ERC1155 {
         }
         return (optionIDs, expiries, priceIds);
     }
+ 
 
     function gelatoCallBack(uint[] memory optionIds, bytes[] memory pythUpdate) external /* onlyGelato() */ {
-        // Arrays to store decoded data
-        uint updateFee = pyth.getUpdateFee(pythUpdate);
-        pyth.updatePriceFeeds{ value: updateFee }(pythUpdate);
+    // Arrays to store decoded data
+    uint updateFee = pyth.getUpdateFee(pythUpdate);
+    pyth.updatePriceFeeds{ value: updateFee }(pythUpdate);
+    
+
+    Option memory op;
+    bool toPay;
+
+    PythStructs.Price memory price;
+    for (uint i = 0; i < optionIds.length; i++) {
+    
+        op = options[optionIds[i]];
         
 
-        Option memory op;
-        bool toPay;
-        uint[] memory prices = new uint[](optionIds.length);
-       
-        PythStructs.Price memory price;
-        for (uint i = 0; i < optionIds.length; i++) {
-     
-            op = options[optionIds[i]];
-            try pyth.getPrice(op.assetID) returns (PythStructs.Price memory _price) {
-                // If getPrice succeeds, use the returned price
-                price = _price;
-            } catch {
-                // If getPrice reverts, use getPriceUnsafe
-                price = pyth.getPriceUnsafe(op.assetID);
-            }
-                results[optionIds[i]] = uint64(price.price);
-                if (op.isCallOption){
-                    uint64(price.price) > op.strikePrice ? toPay = true : false;
-                } else{
-                    uint64(price.price) < op.strikePrice ? toPay = true : false;
-                }
-                options[optionIds[i]].hasToPay = toPay;
-                if (!toPay){
-                    uint writersReturn = op.shares * op.maxiumPayoutPerShare;
-                    usdc.transfer(op.writer, writersReturn);
-                } 
-            
-                emit OptionResolved(optionIds[i], prices[i], toPay);
+    try pyth.getPrice(op.assetID) returns (PythStructs.Price memory _price) {
+        // If getPrice succeeds, use the returned price
+        price = _price;
+    } catch {
+        // If getPrice reverts, use getPriceUnsafe
+        price = pyth.getPriceUnsafe(op.assetID);
+    }
+        results[optionIds[i]] = uint64(price.price);
+        if (op.isCallOption){
+            uint64(price.price) > op.strikePrice ? toPay = true : false;
+        } else{
+            uint64(price.price) < op.strikePrice ? toPay = true : false;
         }
+        options[optionIds[i]].hasToPay = toPay;
+        if (!toPay){
+            uint writersReturn = op.shares * op.maxiumPayoutPerShare;
+            usdc.transfer(op.writer, writersReturn);
+        } 
+        
+        emit OptionResolved(optionIds[i], uint(uint64(price.price)), toPay);
+    }
 
     
     }  
-
 }

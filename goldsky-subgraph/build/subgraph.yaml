@@ -1,6 +1,6 @@
 specVersion: 1.0.0
 schema:
-  file: ./schema.graphql
+  file: schema.graphql
 dataSources:
   - kind: ethereum
     name: optionism
@@ -19,9 +19,10 @@ dataSources:
         - OptionUnitsMappings
       abis:
         - name: optionism
-          file: ./abis/optionism.json
+          file: optionism\abis\optionism.json
       eventHandlers:
-        - event: OptionCreated(indexed address,uint256,bool,uint256,uint256,uint256,uint256,uint256,uint256)
+        - event: OptionCreated(indexed
+            address,uint256,bool,uint256,uint256,uint256,uint256,uint256,uint256)
           handler: handleOptionCreated
         - event: OptionSubscribed(indexed address,uint256,uint256,uint256)
           handler: handleOptionSubscribed
@@ -31,4 +32,4 @@ dataSources:
           handler: handleOptionResolved
         - event: TransferSingle(indexed address,indexed address,indexed address,uint256,uint256)
           handler: handleTransferSingle
-      file: ./src/optionism.ts
+      file: optionism\optionism.wasm

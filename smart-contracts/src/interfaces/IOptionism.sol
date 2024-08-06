@@ -21,6 +21,7 @@ interface IOptionism {
     event OptionCreated(
         address indexed writer,
         uint optionId,
+        bool isCall,
         uint optionExpiry,
         uint premiumUsdcPrice,
         uint strikePrice,

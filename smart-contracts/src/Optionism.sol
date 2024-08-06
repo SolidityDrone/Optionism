@@ -11,7 +11,6 @@ contract Optionism is IOptionism, ERC1155 {
     receive() external payable {}
 
     mapping(uint256 => IOptionism.Option) public options;
-    mapping(uint => bool) public exhaustedArrays;
     mapping(uint => uint) public results;
     // Storage variables
 
@@ -66,7 +65,7 @@ contract Optionism is IOptionism, ERC1155 {
             false,
             false
         );
-        emit OptionCreated(msg.sender, counter, optionExpiry, premiumUsdcPrice, strikePrice, buyExpiry, shares, maximumPayoutPerShare);
+        emit OptionCreated(msg.sender, counter, isCallOption, optionExpiry, premiumUsdcPrice, strikePrice, buyExpiry, shares, maximumPayoutPerShare);
     }
 
     function buyOption(
@@ -102,7 +101,7 @@ contract Optionism is IOptionism, ERC1155 {
         finalGainPerShare > option.maxiumPayoutPerShare ? finalGainPerShare = option.maxiumPayoutPerShare : finalGainPerShare;
         uint claimableUsdc = balanceOf(msg.sender, id) * finalGainPerShare;
 
-        usdc.transferFrom(address(this), msg.sender, claimableUsdc);
+        usdc.transfer(msg.sender, claimableUsdc);
 
         emit OptionClaim(msg.sender, id);
     }
@@ -138,8 +137,7 @@ contract Optionism is IOptionism, ERC1155 {
 
     Option memory op;
     bool toPay;
-    uint[] memory prices = new uint[](optionIds.length);
-    
+
     PythStructs.Price memory price;
     for (uint i = 0; i < optionIds.length; i++) {
     
@@ -165,10 +163,8 @@ contract Optionism is IOptionism, ERC1155 {
             usdc.transfer(op.writer, writersReturn);
         } 
         
-        emit OptionResolved(optionIds[i], prices[i], toPay);
+        emit OptionResolved(optionIds[i], uint(uint64(price.price)), toPay);
     }
-
-    
     }  
 }
     
