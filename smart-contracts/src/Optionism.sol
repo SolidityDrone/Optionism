@@ -65,7 +65,7 @@ contract Optionism is IOptionism, ERC1155 {
             false,
             false
         );
-        emit OptionCreated(msg.sender, counter, isCallOption, optionExpiry, premiumUsdcPrice, strikePrice, buyExpiry, shares, maximumPayoutPerShare);
+        emit OptionCreated(msg.sender, counter, isCallOption, optionExpiry, premiumUsdcPrice, strikePrice, buyExpiry, shares, maximumPayoutPerShare, assetID);
     }
 
     function buyOption(

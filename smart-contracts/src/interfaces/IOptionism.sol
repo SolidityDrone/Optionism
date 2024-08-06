@@ -27,7 +27,8 @@ interface IOptionism {
         uint strikePrice,
         uint buyExpiry,
         uint shares,
-        uint maximumPayoutPerShare
+        uint maximumPayoutPerShare,
+        bytes32 priceId
     );
 
     event OptionSubscribed(

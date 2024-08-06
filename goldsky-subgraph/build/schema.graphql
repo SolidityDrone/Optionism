@@ -15,7 +15,7 @@ type Option @entity {
   responseValue: BigInt
   users: [User!]! @derivedFrom(field: "options")
   isDeleted: Boolean
-  name: String
+  priceId: String
 }
 
 type User @entity {

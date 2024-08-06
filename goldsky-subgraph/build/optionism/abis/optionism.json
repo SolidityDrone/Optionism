@@ -79,6 +79,12 @@
         "internalType": "uint256",
         "name": "maximumPayoutPerShare",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "priceId",
+        "type": "bytes32"
       }
     ],
     "name": "OptionCreated",

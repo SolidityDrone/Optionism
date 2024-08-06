@@ -21,7 +21,7 @@ dataSources:
         - name: optionism
           file: ./abis/optionism.json
       eventHandlers:
-        - event: OptionCreated(indexed address,uint256,bool,uint256,uint256,uint256,uint256,uint256,uint256)
+        - event: OptionCreated(indexed address,uint256,bool,uint256,uint256,uint256,uint256,uint256,uint256,bytes32)
           handler: handleOptionCreated
         - event: OptionSubscribed(indexed address,uint256,uint256,uint256)
           handler: handleOptionSubscribed

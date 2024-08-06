@@ -248,8 +248,8 @@ export class Option extends Entity {
     this.set("isDeleted", Value.fromBoolean(value));
   }
 
-  get name(): string | null {
-    let value = this.get("name");
+  get priceId(): string | null {
+    let value = this.get("priceId");
     if (!value || value.kind == ValueKind.NULL) {
       return null;
     } else {
@@ -257,11 +257,11 @@ export class Option extends Entity {
     }
   }
 
-  set name(value: string | null) {
+  set priceId(value: string | null) {
     if (!value) {
-      this.unset("name");
+      this.unset("priceId");
     } else {
-      this.set("name", Value.fromString(<string>value));
+      this.set("priceId", Value.fromString(<string>value));
     }
   }
 }

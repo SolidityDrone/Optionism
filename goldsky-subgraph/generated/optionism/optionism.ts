@@ -80,6 +80,10 @@ export class OptionCreated__Params {
   get maximumPayoutPerShare(): BigInt {
     return this._event.parameters[8].value.toBigInt();
   }
+
+  get priceId(): Bytes {
+    return this._event.parameters[9].value.toBytes();
+  }
 }
 
 export class OptionResolved extends ethereum.Event {

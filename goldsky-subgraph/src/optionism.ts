@@ -88,7 +88,7 @@ export function handleOptionCreated(event: OptionCreated): void {
     option.strikePrice = event.params.strikePrice;
     option.expirationDate = event.params.optionExpiry;
     option.shares = event.params.shares;
-    option.name = "-";
+    option.priceId = event.params.priceId.toHexString();
     option.sharesLeft = event.params.shares;
     option.capPerUnit = event.params.maximumPayoutPerShare;
     option.countervalue = (event.params.maximumPayoutPerShare).times(event.params.shares);
