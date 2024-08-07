@@ -94,7 +94,7 @@ export function handleOptionCreated(event: OptionCreated): void {
     option.countervalue = (event.params.maximumPayoutPerShare).times(event.params.shares);
     option.deadlineDate = event.params.buyExpiry;
     option.premiumCollected = BigInt.fromI32(0);
-   
+    
     option.save();
   }
 }

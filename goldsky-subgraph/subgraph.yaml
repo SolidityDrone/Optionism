@@ -6,7 +6,7 @@ dataSources:
     name: optionism
     network: base-sepolia
     source:
-      address: "0xb3ad74491e164a3Dc2aeA02dAC2ABFb9dE28358e"
+      address: "0x6833Ed0738378EB0A8f07ee593Ed2642CCC44A6a"
       abi: optionism
       startBlock: 13489788
     mapping:

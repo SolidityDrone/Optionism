@@ -103,7 +103,7 @@ export default function Sidebar() {
     <div className="flex h-screen mt-10">
       {/* Sidebar */}
       <aside className="fixed left-0 h-full w-56 bg-base-200 overflow-y-auto scrollbar-hidden">
-        <h4 className="text-lg pl-2 pt-2 font-bold mb-2 mt-4">Assets</h4>
+        <h4 className="text-lg pl-2 pt-2 font-bold mb-2 mt-2">Assets</h4>
         {['Equity', 'Crypto', 'FX', 'Metal', 'Rates', 'Commodities'].map((type) => (
           <div className="mb-4 pl-2 pr-2" key={type}>
             <button
