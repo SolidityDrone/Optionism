@@ -10,9 +10,10 @@ import {
 interface OptionFormProps {
     selectedPriceId: string | null;
     selectedName: string | null;
+    expo: string;
 }
 
-const OptionForm: React.FC<OptionFormProps> = ({ selectedPriceId, selectedName }) => {
+const OptionForm: React.FC<OptionFormProps> = ({ selectedPriceId, selectedName, expo}) => {
     const [maxPayout, setMaxPayout] = useState<string>('');
     const [strikePrice, setStrikePrice] = useState<string>('');
     const [premiumCost, setPremiumCost] = useState<string>('');
@@ -33,7 +34,7 @@ const OptionForm: React.FC<OptionFormProps> = ({ selectedPriceId, selectedName }
     
         // Convert values to appropriate formats
         const formattedMaxPayout = (parseFloat(maxPayout) * 1e6).toString();
-        const formattedStrikePrice = (parseFloat(strikePrice) * 1e6).toString();
+        const formattedStrikePrice = (parseFloat(strikePrice) * Math.pow(10, -parseInt(expo)) * 1e6).toString();
         const formattedPremiumCost = (parseFloat(premiumCost) * 1e6).toString();
     
         try {

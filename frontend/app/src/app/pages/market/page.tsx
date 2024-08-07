@@ -33,6 +33,8 @@ export default function OptionsData() {
   const [selectedName, setSelectedName] = useState<string | null>(null);
   const [priceFeedData, setPriceFeedData] = useState<PriceFeedData | null>(null);
   const [price, setPrice] = useState<String>("");
+  const [expo, setExpo] = useState<String>("");
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -93,6 +95,7 @@ export default function OptionsData() {
               expo: priceData.parsed[0].price.expo,
             });
             setPrice((priceData.parsed[0].price.price * Math.pow(10, priceData.parsed[0].price.expo)).toFixed(4).toString()+"$");
+            setExpo(priceData.parsed[0].price.expo);
           } else {
             setPriceFeedData(null);
             setError('No price feed data found');
@@ -137,6 +140,7 @@ export default function OptionsData() {
       <OptionForm
         selectedPriceId={selectedPriceId}
         selectedName={selectedName}
+        expo={expo}
       />
      
     </>

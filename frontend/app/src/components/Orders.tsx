@@ -47,7 +47,7 @@ const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, lo
         error,
         writeContract
     } = useWriteContract();
-    
+
 
     const handleInputChange = (id: string, value: string) => {
         setInputValues(prev => ({ ...prev, [id]: value }));
@@ -80,20 +80,20 @@ const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, lo
         }
     };
 
-    useEffect(()=>{
-        if (isPending){
+    useEffect(() => {
+        if (isPending) {
             console.log("pending");
         } else {
             console.log("not pending");
         }
-    },[isPending])
+    }, [isPending])
 
-    
+
     return (
         <div className="fixed top-0 left-56 p-4 flex mt-10 flex-col gap-4">
-         
+
             <h2 className="text-lg font-bold">Selected asset: {selectedName ? selectedName : "Void"} - Current price: {price}</h2>
-         
+
 
             {/* Wrapper for both tables */}
             <div className="border border-gray-300 rounded-lg overflow-hidden">
@@ -101,34 +101,43 @@ const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, lo
                     {/* Call Options Table (Entries start from the bottom) */}
                     <div className="w-[1200px]">
                         <div className="h-[370px] bg-zinc-900 overflow-y-auto scrollbar-hidden flex flex-col-reverse">
-                            <table className="table-auto bg-black-950 w-full">
+                            <table className="table-auto bg-black-950 w-full ">
                                 <tbody>
                                     {callOptions.length > 0 ? (
                                         callOptions.map((option) => (
-                                            <tr key={option.id} className="border-b bg-green-900 hover:bg-green-700">
-                                                <td className="w-[80px] text-center">{option.id}</td>
+                                            <tr key={option.id} className="border-b  bg-green-900 hover:bg-green-700">
+                                                <td className="w-[60px] text-center">{option.id}</td>
                                                 <td className="w-[134px] text-center">{(parseFloat(option.premium) / 1000000).toFixed(6)}$</td>
                                                 <td className="w-[134px] text-center">{(parseFloat(option.capPerUnit) / 1000000).toFixed(6)}$</td>
-                                                <td className="w-[134px] text-center">{formatDate(option.deadlineDate)}</td>
-                                                <td className="w-[134px] text-center">{formatDate(option.expirationDate)}</td>
-                                                <td className="w-[134px] text-center">
+                                                <td className="w-[120px] text-center">{formatDate(option.deadlineDate)}</td>
+                                                <td className="w-[120px] text-center">{formatDate(option.expirationDate)}</td>
+                                                <td className="w-[80px] text-center">
                                                     {option.sharesLeft + "/" + option.shares}
                                                 </td>
                                                 <td className="w-[134px] text-center">{(parseFloat(option.strikePrice) / 1000000).toFixed(6)}$</td>
-                                                <td className="w-[134px] text-center">
+                                                <td className="w-[154px] text-center">
                                                     <div className="flex items-center justify-center gap-2">
                                                         <input
                                                             type="text"
-                                                            className="border rounded px-2 py-1 w-[70%] text-center"
+                                                            className="border rounded h-[22px] px-2 py-1 w-[58px] text-center"
                                                             placeholder="Enter value"
                                                             value={inputValues[option.id] || ''}
                                                             onChange={(e) => handleInputChange(option.id, e.target.value)}
                                                         />
-                                                        <button
-                                                            className="bg-blue-500 text-white rounded px-4 py-1 hover:bg-blue-600"
+                                                          <button
+                                                            className="bg-gray-900 text-white rounded h-[22px] px-4 w-[144px] flex items-center justify-center hover:bg-gray-800"
                                                             onClick={() => handleSubmit(option.id)}
                                                         >
-                                                            Submit
+                                                            Pay {(() => {
+                                                                const premium = parseFloat(option.premium) / 1000000;
+                                                                const inputValue = parseFloat(inputValues[option.id]);
+
+                                                                if (!isNaN(premium) && !isNaN(inputValue)) {
+                                                                    return (premium * inputValue).toFixed(2).toString() + "$";
+                                                                } else {
+                                                                    return '';
+                                                                }
+                                                            })()}
                                                         </button>
                                                     </div>
                                                 </td>
@@ -147,17 +156,17 @@ const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, lo
                     </div>
 
                     {/* Shared Header */}
-                    <table className="table-auto bg-black-950 w-full">
+                    <table className="table-auto bg-black-950">
                         <thead className="bg-black-800">
                             <tr>
-                                <th className='w-[80px]'>ID</th>
-                                <th className='w-[134px]'>Premium price</th>
+                                <th className='w-[60px]'>ID</th>
+                                <th className='w-[154px]'>Premium price</th>
                                 <th className='w-[134px]'>Cap per unit</th>
                                 <th className='w-[134px]'>Deadline Date</th>
                                 <th className='w-[134px]'>Expiration Date</th>
-                                <th className='w-[134px]'>Shares Left</th>
+                                <th className='w-[80px]'>Shares Left</th>
                                 <th className='w-[134px]'>Strike Price</th>
-                                <th className='w-[134px]'>Action</th>
+                                <th className='w-[234px]'>Action</th>
                             </tr>
                         </thead>
                     </table>
@@ -170,29 +179,38 @@ const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, lo
                                     {putOptions.length > 0 ? (
                                         putOptions.map((option) => (
                                             <tr key={option.id} className="border-b bg-red-900 hover:bg-red-700">
-                                                <td className="w-[80px] text-center">{option.id}</td>
+                                                <td className="w-[60px] text-center">{option.id}</td>
                                                 <td className="w-[134px] text-center">{(parseFloat(option.premium) / 1000000).toFixed(6)}$</td>
                                                 <td className="w-[134px] text-center">{(parseFloat(option.capPerUnit) / 1000000).toFixed(6)}$</td>
-                                                <td className="w-[134px] text-center">{formatDate(option.deadlineDate)}</td>
-                                                <td className="w-[134px] text-center">{formatDate(option.expirationDate)}</td>
-                                                <td className="w-[134px] text-center">
+                                                <td className="w-[120px] text-center">{formatDate(option.deadlineDate)}</td>
+                                                <td className="w-[120px] text-center">{formatDate(option.expirationDate)}</td>
+                                                <td className="w-[80px] text-center">
                                                     {option.sharesLeft + "/" + option.shares}
                                                 </td>
                                                 <td className="w-[134px] text-center">{(parseFloat(option.strikePrice) / 1000000).toFixed(6)}$</td>
-                                                <td className="w-[134px] text-center">
+                                                <td className="w-[154px] text-center">
                                                     <div className="flex items-center justify-center gap-2">
                                                         <input
                                                             type="text"
-                                                            className="border rounded px-2 py-1 w-[70%] text-center"
+                                                            className="border rounded h-[22px] px-2 py-1 w-[58px] text-center"
                                                             placeholder="Enter value"
                                                             value={inputValues[option.id] || ''}
                                                             onChange={(e) => handleInputChange(option.id, e.target.value)}
                                                         />
                                                         <button
-                                                            className="bg-blue-500 text-white rounded px-4 py-1 hover:bg-blue-600"
+                                                            className="bg-gray-900 text-white rounded h-[22px] px-4 w-[144px] flex items-center justify-center hover:bg-gray-800"
                                                             onClick={() => handleSubmit(option.id)}
                                                         >
-                                                            Submit
+                                                            Pay {(() => {
+                                                                const premium = parseFloat(option.premium) / 1000000;
+                                                                const inputValue = parseFloat(inputValues[option.id]);
+
+                                                                if (!isNaN(premium) && !isNaN(inputValue)) {
+                                                                    return (premium * inputValue).toFixed(2).toString() + "$";
+                                                                } else {
+                                                                    return '';
+                                                                }
+                                                            })()}
                                                         </button>
                                                     </div>
                                                 </td>
@@ -200,7 +218,7 @@ const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, lo
                                         ))
                                     ) : (
                                         <tr>
-                                                  <td colSpan={9} className="text-center py-2">
+                                            <td colSpan={9} className="text-center py-2">
                                                 No option published for that market
                                             </td>
                                         </tr>
