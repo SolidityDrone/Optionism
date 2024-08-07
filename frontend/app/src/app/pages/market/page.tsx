@@ -40,7 +40,7 @@ export default function OptionsData() {
       setLoading(true);
       try {
         // Fetch options data from The Graph
-        const optionsResponse = await fetch('https://api.studio.thegraph.com/query/73482/optionism/version/latest', {
+        const optionsResponse = await fetch('https://api.goldsky.com/api/public/project_clzf3hstqye4x01x8hbgnch6n/subgraphs/optionism/v0.0.1/gn', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -136,6 +136,7 @@ export default function OptionsData() {
         loading={loading}
         selectedName={selectedName}
         price={price.toString()}
+        expo={expo}
       />
       <OptionForm
         selectedPriceId={selectedPriceId}

@@ -34,9 +34,11 @@ const OptionForm: React.FC<OptionFormProps> = ({ selectedPriceId, selectedName, 
     
         // Convert values to appropriate formats
         const formattedMaxPayout = (parseFloat(maxPayout) * 1e6).toString();
-        const formattedStrikePrice = (parseFloat(strikePrice) * Math.pow(10, -parseInt(expo)) * 1e6).toString();
+       
+        const formattedStrikePrice = (parseFloat(strikePrice) * 1e6).toString();
+        const expoWiseStrikePrice = parseInt(formattedStrikePrice) * Math.pow(10, parseInt(expo) *  -1);
         const formattedPremiumCost = (parseFloat(premiumCost) * 1e6).toString();
-    
+        
         try {
             writeContract({
                 address: OptionismAddress,
@@ -45,7 +47,7 @@ const OptionForm: React.FC<OptionFormProps> = ({ selectedPriceId, selectedName, 
                 args: [
                     isCall,
                     BigInt(formattedPremiumCost),
-                    BigInt(formattedStrikePrice),
+                    BigInt(expoWiseStrikePrice),
                     BigInt(new Date(deadline).getTime() / 1000),
                     BigInt(new Date(expiry).getTime() / 1000), 
                     selectedPriceId as `0x${string}`,
@@ -86,7 +88,7 @@ const OptionForm: React.FC<OptionFormProps> = ({ selectedPriceId, selectedName, 
 
     return (
         <div className="fixed top-48 right-14 p-4 w-[340px] border border-gray-600 rounded-lg bg-gray-700 shadow-md">
-            
+          
             <form onSubmit={handleSubmit} className="space-y-3">
                 <div className="mb-4">
                     <div className="flex items-center justify-between">
@@ -164,7 +166,7 @@ const OptionForm: React.FC<OptionFormProps> = ({ selectedPriceId, selectedName, 
                     className="bg-blue-500 text-white rounded px-3 py-1 hover:bg-blue-600 text-sm"
                 >
                     Write
-                </button>
+                </button> 
             </form>
         </div>
     );

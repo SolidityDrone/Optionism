@@ -39,7 +39,7 @@ const formatDate = (timestamp: string): string => {
     return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
 };
 
-const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, loading, selectedName, price }) => {
+const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, loading, selectedName, price, expo}) => {
     const [inputValues, setInputValues] = useState<{ [key: string]: string }>({});
     const {
         data: hash,
@@ -94,7 +94,7 @@ const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, lo
 
             <h2 className="text-lg font-bold">Selected asset: {selectedName ? selectedName : "Void"} - Current price: {price}</h2>
 
-
+   
             {/* Wrapper for both tables */}
             <div className="border border-gray-300 rounded-lg overflow-hidden">
                 <div className="flex text-[14px] flex-col">
@@ -114,13 +114,13 @@ const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, lo
                                                 <td className="w-[80px] text-center">
                                                     {option.sharesLeft + "/" + option.shares}
                                                 </td>
-                                                <td className="w-[134px] text-center">{(parseFloat(option.strikePrice) / 1000000).toFixed(6)}$</td>
+                                                <td className="w-[134px] text-center">{((parseFloat(option.strikePrice) / 1000000) * Math.pow(10, expo) ).toFixed(6)}$</td>
                                                 <td className="w-[154px] text-center">
                                                     <div className="flex items-center justify-center gap-2">
                                                         <input
                                                             type="text"
                                                             className="border rounded h-[22px] px-2 py-1 w-[58px] text-center"
-                                                            placeholder="Enter value"
+                                                            placeholder="qty"
                                                             value={inputValues[option.id] || ''}
                                                             onChange={(e) => handleInputChange(option.id, e.target.value)}
                                                         />
@@ -187,13 +187,13 @@ const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, lo
                                                 <td className="w-[80px] text-center">
                                                     {option.sharesLeft + "/" + option.shares}
                                                 </td>
-                                                <td className="w-[134px] text-center">{(parseFloat(option.strikePrice) / 1000000).toFixed(6)}$</td>
+                                                <td className="w-[134px] text-center">{((parseFloat(option.strikePrice) / 1000000) * Math.pow(10, expo) ).toFixed(6)}$</td>
                                                 <td className="w-[154px] text-center">
                                                     <div className="flex items-center justify-center gap-2">
                                                         <input
                                                             type="text"
                                                             className="border rounded h-[22px] px-2 py-1 w-[58px] text-center"
-                                                            placeholder="Enter value"
+                                                            placeholder="qty"
                                                             value={inputValues[option.id] || ''}
                                                             onChange={(e) => handleInputChange(option.id, e.target.value)}
                                                         />
