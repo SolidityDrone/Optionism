@@ -1,6 +1,9 @@
 "use client";
 import React, { useEffect, useState } from 'react';
-import  Sidebar  from '@/components/Sidebar'
+import Sidebar from '@/components/Sidebar';
+import OptionsTable from '@/components/Orders';
+import OptionForm from '@/components/WriteOptionForm';
+
 interface Option {
   id: string;
   countervalue: string;
@@ -14,16 +17,28 @@ interface Option {
   strikePrice: string;
 }
 
+interface PriceFeedData {
+  id: string;
+  price: number;
+  conf: number;
+  expo: number;
+}
+
 export default function OptionsData() {
   const [callOptions, setCallOptions] = useState<Option[]>([]);
   const [putOptions, setPutOptions] = useState<Option[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-
+  const [selectedPriceId, setSelectedPriceId] = useState<string | null>(null);
+  const [selectedName, setSelectedName] = useState<string | null>(null);
+  const [priceFeedData, setPriceFeedData] = useState<PriceFeedData | null>(null);
+  const [price, setPrice] = useState<String>("");
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       try {
-        const response = await fetch('https://api.studio.thegraph.com/query/73482/optionism/version/latest', {
+        // Fetch options data from The Graph
+        const optionsResponse = await fetch('https://api.studio.thegraph.com/query/73482/optionism/version/latest', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -31,7 +46,7 @@ export default function OptionsData() {
           body: JSON.stringify({
             query: `
               {
-                options(where: {priceId_contains: ""}) {
+                options(where: {priceId_contains: "${selectedPriceId}"}) {
                   id
                   countervalue
                   capPerUnit
@@ -48,120 +63,82 @@ export default function OptionsData() {
           }),
         });
 
-        const json = await response.json();
-
-        if (json.data && json.data.options) {
-          const callOpts = json.data.options.filter((option: Option) => option.isCall);
-          const putOpts = json.data.options.filter((option: Option) => !option.isCall);
+        const optionsJson = await optionsResponse.json();
+        
+        if (optionsJson.data && optionsJson.data.options) {
+          const callOpts = optionsJson.data.options.filter((option: Option) => option.isCall);
+          const putOpts = optionsJson.data.options.filter((option: Option) => !option.isCall);
 
           setCallOptions(callOpts);
           setPutOptions(putOpts);
         } else {
-          setError('No data found');
+          setError('No options data found');
+        }
+
+        // Fetch price feed data from Pyth Network
+        if (selectedPriceId) {
+          const priceFeedResponse = await fetch(`https://hermes.pyth.network/v2/updates/price/latest?ids%5B%5D=${selectedPriceId}`);
+         
+          const priceFeedJson = await priceFeedResponse.json();
+          
+          if (priceFeedJson) {
+            
+            const priceData = priceFeedJson; // Assuming the first object is the relevant data
+            console.log(priceData.parsed[0].price.price);
+            
+            setPriceFeedData({
+              id: selectedPriceId,
+              price: priceData.parsed[0].price.price,
+              conf: priceData.parsed[0].price.conf,
+              expo: priceData.parsed[0].price.expo,
+            });
+            setPrice((priceData.parsed[0].price.price * Math.pow(10, priceData.parsed[0].price.expo)).toFixed(4).toString()+"$");
+          } else {
+            setPriceFeedData(null);
+            setError('No price feed data found');
+          }
+   
         }
       } catch (err) {
         console.error('Error fetching data:', err);
-        setError('Failed to load options data');
+        setError('Failed to load data');
       } finally {
         setLoading(false);
       }
     };
 
+    // Initial data fetch
     fetchData();
-  }, []);
 
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>{error}</p>;
+    // Set up polling to refresh data every 4 seconds
+    const intervalId = setInterval(() => {
+      fetchData();
+    }, 4000);
 
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>{error}</p>;
+    // Clear the interval on component unmount
+    return () => clearInterval(intervalId);
+  }, [selectedPriceId]);
 
-  return (<>
-  
-  <Sidebar/>
-  <div className="fixed top-0 left-56 p-4 flex mt-10 flex-col gap-4">
-  
-      <h2 className="text-lg font-bold">Equity.USDC/USDC</h2>
-
-      {/* Wrapper for both tables */}
-      <div className="border border-gray-300 rounded-lg overflow-hidden">
-        <div className="flex text-[14px] flex-col">
-
-          {/* Call Options Table (Entries start from the bottom) */}
-          <div className=" w-[1200px]">
-            <div className="h-[370px] bg-zinc-900  overflow-y-auto scrollbar-hidden flex flex-col-reverse">
-              <table className="table-auto  bg-black-950 w-full">
-                <tbody>
-                  {callOptions.length > 0 ? (
-                    callOptions.map((option) => (
-                     <> <tr key={option.id} className="border-b bg-green-900">
-                     <td>{option.id}</td>
-                     <td>{option.countervalue}</td>
-                     <td>{option.capPerUnit}</td>
-                     <td>{option.deadlineDate}</td>
-                     <td>{option.expirationDate}</td>
-                     <td>{option.premium}</td>
-                     <td>{option.sharesLeft}</td>
-                     <td>{option.shares}</td>
-                     <td>{option.strikePrice}</td>
-                   </tr></>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={9} className="text-center py-2">No Call Options Available</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Shared Header */}
-          <thead className="bg-black-800">
-            <tr>
-              <th>ID</th>
-              <th>Countervalue</th>
-              <th>Cap Per Unit</th>
-              <th>Deadline Date</th>
-              <th>Expiration Date</th>
-              <th>Premium</th>
-              <th>Shares Left</th>
-              <th>Shares</th>
-              <th>Strike Price</th>
-            </tr>
-          </thead>
-
-          {/* Put Options Table */}
-          <div className="w-full bg-black-950">
-            <div className="h-[370px] bg-zinc-900 overflow-y-auto scrollbar-hidden">
-              <table className="table-auto w-full ">
-                <tbody>
-                  {putOptions.length > 0 ? (
-                    putOptions.map((option) => (
-                      <tr key={option.id} className="border-b bg-red-900">
-                        <td>{option.id}</td>
-                        <td>{option.countervalue}</td>
-                        <td>{option.capPerUnit}</td>
-                        <td>{option.deadlineDate}</td>
-                        <td>{option.expirationDate}</td>
-                        <td>{option.premium}</td>
-                        <td>{option.sharesLeft}</td>
-                        <td>{option.shares}</td>
-                        <td>{option.strikePrice}</td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={9} className="text-center py-2">No Put Options Available</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+  return (
+    <>
+      <Sidebar
+        onSelectPriceId={(id, name) => {
+          setSelectedPriceId(id);
+          setSelectedName(name);
+        }}
+      />
+      <OptionsTable
+        callOptions={callOptions}
+        putOptions={putOptions}
+        loading={loading}
+        selectedName={selectedName}
+        price={price.toString()}
+      />
+      <OptionForm
+        selectedPriceId={selectedPriceId}
+        selectedName={selectedName}
+      />
+     
     </>
   );
 }

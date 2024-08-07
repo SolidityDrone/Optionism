@@ -7,17 +7,22 @@ interface Asset {
   description: string;
   asset_type: AssetType;
   symbol: string;
+  priceId: string;
 }
 
-export default function Sidebar() {
+interface SidebarProps {
+  onSelectPriceId: (priceId: string, description: string) => void;
+}
+
+export default function Sidebar({ onSelectPriceId }: SidebarProps) {
   const [commodities, setCommodities] = useState<Asset[]>([]);
   const [equity, setEquity] = useState<Asset[]>([]);
   const [crypto, setCrypto] = useState<Asset[]>([]);
   const [fx, setFX] = useState<Asset[]>([]);
   const [metal, setMetal] = useState<Asset[]>([]);
   const [rates, setRates] = useState<Asset[]>([]);
+  const [selected, setSelected] = useState<String>("");
   
-  // State to track expansion of categories
   const [expanded, setExpanded] = useState<Record<AssetType, boolean>>({
     Commodities: false,
     Equity: false,
@@ -31,26 +36,22 @@ export default function Sidebar() {
     async function fetchAssets() {
       try {
         const response = await fetch('https://hermes.pyth.network/v2/price_feeds');
-        const data: any[] = await response.json(); // Parse JSON data
+        const data: any[] = await response.json();
 
-        console.log('Fetched Data:', data); // Log fetched data
-
-        // Initialize arrays for each asset type
         const commoditiesList: Asset[] = [];
         const equityList: Asset[] = [];
         const cryptoList: Asset[] = [];
         const fxList: Asset[] = [];
         const metalList: Asset[] = [];
         const ratesList: Asset[] = [];
-       
-        // Group assets by type
+
         data.forEach((item: any) => {
           if (item.attributes.asset_type) {
             const assetType: AssetType = item.attributes.asset_type as AssetType;
             const description = item.attributes.description;
             const symbol = item.attributes.symbol;
-            
-            const asset = { description, symbol, asset_type: assetType };
+            const priceId = "0x"+item.id;
+            const asset = { description, symbol, asset_type: assetType, priceId};
             
             switch (assetType.toString()) {
               case 'Commodities':
@@ -77,7 +78,6 @@ export default function Sidebar() {
           }
         });
 
-        // Update state
         setCommodities(commoditiesList);
         setEquity(equityList);
         setCrypto(cryptoList);
@@ -99,9 +99,14 @@ export default function Sidebar() {
     }));
   };
 
+  const handleItemClick = (priceId: string, description: string) => {
+    console.log('Selected Price ID:', priceId); // Add this line to debug
+    onSelectPriceId(priceId, description);
+    setSelected(priceId);
+  };
+
   return (
     <div className="flex h-screen mt-10">
-      {/* Sidebar */}
       <aside className="fixed left-0 h-full w-56 bg-base-200 overflow-y-auto scrollbar-hidden">
         <h4 className="text-lg pl-2 pt-2 font-bold mb-2 mt-2">Assets</h4>
         {['Equity', 'Crypto', 'FX', 'Metal', 'Rates', 'Commodities'].map((type) => (
@@ -130,10 +135,21 @@ export default function Sidebar() {
                     type === 'Metal' ? metal :
                     rates).map((asset, index) => (
                     <li key={index} className={`py-2 ${index > 0 ? 'border-t border-gray-500' : ''}`}>
-                      <a href="#" className="block py-2 hover:bg-gray-800 hover:text-white transition-colors duration-200">
+                     {selected == asset.priceId ? (<a
+                        href="#"
+                        onClick={() => handleItemClick(asset.priceId, asset.description)}
+                        className="block py-2 bg-gray-700 hover:text-white transition-colors duration-200"
+                      >
                         <span className="block text-[12px] ">{asset.symbol}</span>
                         <span className="block text-[8px] ">{asset.description}</span>
-                      </a>
+                      </a>) : (<a
+                        href="#"
+                        onClick={() => handleItemClick(asset.priceId, asset.description)}
+                        className="block py-2 hover:bg-gray-800 hover:text-white transition-colors duration-200"
+                      >
+                        <span className="block text-[12px] ">{asset.symbol}</span>
+                        <span className="block text-[8px] ">{asset.description}</span>
+                      </a>)}
                     </li>
                   ))
                 ) : (

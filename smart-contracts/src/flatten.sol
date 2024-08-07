@@ -926,7 +926,8 @@ interface IOptionism {
         uint strikePrice,
         uint buyExpiry,
         uint shares,
-        uint maximumPayoutPerShare
+        uint maximumPayoutPerShare,
+        bytes32 priceId
     );
 
     event OptionSubscribed(
@@ -1978,7 +1979,7 @@ contract Optionism is IOptionism, ERC1155 {
             false,
             false
         );
-        emit OptionCreated(msg.sender, counter, isCallOption, optionExpiry, premiumUsdcPrice, strikePrice, buyExpiry, shares, maximumPayoutPerShare);
+        emit OptionCreated(msg.sender, counter, isCallOption, optionExpiry, premiumUsdcPrice, strikePrice, buyExpiry, shares, maximumPayoutPerShare, assetID);
     }
 
     function buyOption(
@@ -2014,8 +2015,8 @@ contract Optionism is IOptionism, ERC1155 {
         finalGainPerShare > option.maxiumPayoutPerShare ? finalGainPerShare = option.maxiumPayoutPerShare : finalGainPerShare;
         uint claimableUsdc = balanceOf(msg.sender, id) * finalGainPerShare;
 
-        usdc.transferFrom(address(this), msg.sender, claimableUsdc);
-
+        usdc.transfer(msg.sender, claimableUsdc);
+        _burn(msg.sender, id, balanceOf(msg.sender, id));
         emit OptionClaim(msg.sender, id);
     }
 
@@ -2078,7 +2079,5 @@ contract Optionism is IOptionism, ERC1155 {
         
         emit OptionResolved(optionIds[i], uint(uint64(price.price)), toPay);
     }
-
-    
     }  
 }
