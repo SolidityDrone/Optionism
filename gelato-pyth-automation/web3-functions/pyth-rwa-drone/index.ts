@@ -37,7 +37,7 @@ Web3Function.onRun(async (context: Web3FunctionContext) => {
   const chunkExpiriesArray = retrievedExpiries.map((expiry: BigNumber) => expiry.toNumber());
   const chunkPriceIdsArray = retrievedPriceIds.map((id: BytesLike) => utils.hexlify(id));
   const chunkOptionIdsArray = retrievedOptionIds.map((opId: BigNumber) => opId.toNumber());
-
+  
   console.log("Total Items:", chunkExpiriesArray.length);
 
   // Get the current Unix timestamp in seconds

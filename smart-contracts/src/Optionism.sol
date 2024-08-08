@@ -75,6 +75,9 @@ contract Optionism is IOptionism, ERC1155 {
         uint finalAmountOfShares = amountOfShares;
         if (amountOfShares > remainingShares){
             finalAmountOfShares = remainingShares;
+            if (finalAmountOfShares == 0){
+                revert();
+            } 
         }
         _mint(msg.sender, id, amountOfShares, "");
         uint amountToPay = finalAmountOfShares * option.premiumUsdcPrice;
@@ -86,6 +89,7 @@ contract Optionism is IOptionism, ERC1155 {
         options[id].sharesEmitted = finalAmountOfShares;
         emit OptionSubscribed(msg.sender, id, finalAmountOfShares, amountToPay);
     }
+
 
     function deleteOption(uint256 id) public {
         // to do
@@ -107,8 +111,8 @@ contract Optionism is IOptionism, ERC1155 {
 
     
     function getArrayChunk(uint startIndex, uint endIndex) public view returns(uint[] memory optionIDs, uint[] memory expiries, bytes32[] memory priceIds) {
-        if (endIndex > optionsArray.length - 1) {
-            endIndex = optionsArray.length - 1;
+        if (endIndex > optionsArray.length ) {
+            endIndex = optionsArray.length;
         }
         uint length = endIndex - startIndex;
         uint j;
@@ -127,7 +131,6 @@ contract Optionism is IOptionism, ERC1155 {
         return (optionIDs, expiries, priceIds);
     }
  
-
     function gelatoCallBack(uint[] memory optionIds, bytes[] memory pythUpdate) external /* onlyGelato() */ {
     // Arrays to store decoded data
     uint updateFee = pyth.getUpdateFee(pythUpdate);

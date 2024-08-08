@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { OptionismABI, OptionismAddress } from '@/abi/optionism';
 import {
-    useWaitForTransactionReceipt,
-    useWriteContract,
-    useAccount,
+        useWaitForTransactionReceipt,
+        useWriteContract,
+        useAccount,
 } from 'wagmi';
 import { writeContract } from 'wagmi/actions';
 

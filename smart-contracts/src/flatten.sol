@@ -1928,14 +1928,12 @@ contract Optionism is IOptionism, ERC1155 {
     mapping(uint => uint) public results;
     // Storage variables
 
-    IPyth pyth;  
+    IPyth public pyth;  
     
     uint256[] public optionsArray;
     uint internal counter;
     address internal gelatoAddress;
-    address public usdcAddress; 
-    
-    IERC20 usdc;
+    IERC20 public usdc;
 
     constructor(address _gelatoAddress, address _pyth, address _mockUsdc)ERC1155(""){
         pyth = IPyth(_pyth); 
@@ -1998,6 +1996,7 @@ contract Optionism is IOptionism, ERC1155 {
             optionsArray.push(id);
         }
         options[id].isActive = true;
+        options[id].sharesEmitted = finalAmountOfShares;
         emit OptionSubscribed(msg.sender, id, finalAmountOfShares, amountToPay);
     }
 
