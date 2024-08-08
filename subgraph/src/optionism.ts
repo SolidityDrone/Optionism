@@ -60,7 +60,7 @@ export function handleTransferSingle(event: TransferSingle): void {
       }
       mapping.user = newUser.id!; // Ensure newUser.id is not null
       mapping.option = option.id;
-      mapping.units = option.shares; // Assign units from the Option entity
+      mapping.units = event.params.value; // Assign units from the Option entity
       mapping.save();
     }
   }

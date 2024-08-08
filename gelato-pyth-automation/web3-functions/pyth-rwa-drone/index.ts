@@ -74,7 +74,7 @@ const mockArray = new Array(validPriceIdsArray.length).fill(mockPriceId);
 console.log(chunkPriceIdsArray);
 
 // Construct the URL with the price IDs
-const baseURL = "https://hermes.pyth.network/v2/updates/price/latest/";
+const baseURL = "https://hermes.pyth.network/v2/updates/price/latest"; // latest/ ?
 const idsQueryString = mockArray.map(id => `ids%5B%5D=${id}`).join("&");
 const url = `${baseURL}?${idsQueryString}`;
 
