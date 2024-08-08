@@ -17,7 +17,21 @@ interface Option {
   shares: string;
   strikePrice: string;
   priceId: string;
-  responseValue: string | null; // Added responseValue field
+  responseValue: string | null;
+}
+
+interface OptionUnitMapping {
+  capPerUnit: string;
+  expirationDate: string;
+  hasToPay: string;
+  isCall: boolean;
+  premium: string;
+  priceId: string;
+  responseValue: string | null;
+  shares: string;
+  strikePrice: string;
+  units: string;  // Added units field
+  claimed: boolean;  // Added claimed field
 }
 
 interface PriceFeedData {
@@ -41,18 +55,16 @@ interface LatestPriceData {
 export default function Dashboard() {
   const account = useAccount();
   const [wrote, setWrote] = useState<Option[]>([]);
-  const [bought, setBought] = useState<Option[]>([]);
+  const [bought, setBought] = useState<OptionUnitMapping[]>([]); // Updated state type
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [priceFeedSymbolMap, setPriceFeedSymbolMap] = useState<PriceFeedSymbolMap>({});
   const [latestPriceData, setLatestPriceData] = useState<LatestPriceData>({});
 
-  // Utility function to map bytes string to corresponding symbol
   const getSymbolFromPriceId = (priceId: string): string => {
     return priceFeedSymbolMap[priceId.toLowerCase()] || 'Unknown';
   };
 
-  // Utility function to format dates
   const formatDate = (timestamp: string): string => {
     const date = new Date(parseInt(timestamp) * 1000);
     const day = date.getDate().toString().padStart(2, '0');
@@ -63,7 +75,6 @@ export default function Dashboard() {
     return `${day}/${month}/${year} ${hours}:${minutes}`;
   };
 
-  // Fetch the latest price data from the Pyth API
   const fetchLatestPrices = async (priceIds: string[]) => {
     const baseURL = "https://hermes.pyth.network/v2/updates/price/latest";
     const idsQueryString = priceIds.map(id => `ids%5B%5D=${id}`).join("&");
@@ -71,7 +82,6 @@ export default function Dashboard() {
 
     try {
       const response = await fetch(url);
-
       const data = await response.json();
      
       const latestPrices: LatestPriceData = {};
@@ -142,20 +152,10 @@ export default function Dashboard() {
 
         const optionsJson = await optionsResponse.json();
         if (optionsJson.data && optionsJson.data.options) {
-          const callOpts = optionsJson.data.options.filter((option: Option) => option.isCall);
-          const putOpts = optionsJson.data.options.filter((option: Option) => !option.isCall);
+          setWrote(optionsJson.data.options);
 
-          // Sort options by expiration date (farthest date at the bottom)
-          const sortedCallOpts = callOpts.sort((a, b) => parseInt(a.expirationDate) - parseInt(b.expirationDate));
-          const sortedPutOpts = putOpts.sort((a, b) => parseInt(a.expirationDate) - parseInt(b.expirationDate));
-
-          setWrote(sortedCallOpts); // Assuming call options
-          setBought(sortedPutOpts); // Assuming put options
-
-          // Fetch latest prices for all priceIds in the options
           const priceIds = optionsJson.data.options.map((option: Option) => option.priceId);
           fetchLatestPrices(priceIds);
-
         } else {
           setError('No options data found');
         }
@@ -168,18 +168,70 @@ export default function Dashboard() {
       }
     };
 
-    // Fetch Pyth Network data
+    const fetchOptionUnitsMappings = async () => {
+      try {
+        const response = await fetch('https://api.goldsky.com/api/public/project_clzf3hstqye4x01x8hbgnch6n/subgraphs/optionism/v0.0.1/gn', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            query: `
+              {
+                optionUnitsMappings(where: {user_contains_nocase: "${account.address}", units_gt: "0"}) {
+                  option {
+                    capPerUnit
+                    expirationDate
+                    hasToPay
+                    isCall
+                    premium
+                    priceId
+                    responseValue
+                    shares
+                    strikePrice
+                  }
+                  units
+                  claimed
+                }
+              }
+            `,
+          }),
+        });
+
+        const jsonResponse = await response.json();
+        if (jsonResponse.data && jsonResponse.data.optionUnitsMappings) {
+          // Transform data to match OptionUnitMapping interface
+          const mappings = jsonResponse.data.optionUnitsMappings.map((mapping: any) => ({
+            ...mapping.option,
+            id: mapping.option.priceId, 
+            sharesLeft: mapping.option.shares, 
+            units: mapping.units, 
+            claimed: mapping.claimed 
+          }));
+
+          setBought(mappings);
+
+          // Fetch latest prices for all priceIds in the mappings
+          const priceIds = mappings.map((option: OptionUnitMapping) => option.priceId);
+          fetchLatestPrices(priceIds);
+        } else {
+          setError('No option units mappings found');
+        }
+      } catch (err) {
+        console.error('Error fetching option units mappings:', err);
+        setError('Failed to load option units mappings');
+      }
+    };
+
     fetchPythData();
-
-    // Initial data fetch
     fetchData();
+    fetchOptionUnitsMappings();
 
-    // Set up polling to refresh data every 4 seconds
     const intervalId = setInterval(() => {
       fetchData();
+      fetchOptionUnitsMappings();
     }, 4000);
 
-    // Clear the interval on component unmount
     return () => clearInterval(intervalId);
   }, [account.address]);
 
@@ -187,7 +239,7 @@ export default function Dashboard() {
     <div className="flex">
       {/* User-specific options */}
       <div
-        className="fixed left-[20px]  top-[200px] bg-gray-800 text-white p-4"
+        className="fixed left-[20px] top-[200px] bg-gray-800 text-white p-4"
         style={{ width: '850px', height: '600px' }}
       >
         <h2 className="text-lg font-bold">Your writings</h2>
@@ -196,26 +248,24 @@ export default function Dashboard() {
             <table className="text-[14px] table-auto w-full">
               <thead className='sticky top-0 bg-zinc-900'>
                 <tr>
+                  <th>Call/Put</th> {/* New column for Call/Put */}
                   <th>Symbol</th>
                   <th>Current Price</th>
                   <th>Strike Price</th>
-    
                   <th>Cap Per Unit</th>
                   <th>Premium</th>
-                  <th>Shares </th>
+                  <th>Shares</th>
                   <th>Expiry</th>
-                  <th>Result</th> {/* New column for Response Value */}
-   
+                  <th>Result</th>
                 </tr>
               </thead>
               <tbody>
                 {wrote.length > 0 ? (
                   wrote.map((option) => {
                     const priceData = latestPriceData[option.priceId.toLowerCase()] || { price: 0, expo: 0 };
-                    const adjustedStrikePrice = (parseFloat(option.strikePrice) / 1000000) * Math.pow(10, (priceData.expo));
+                    const adjustedStrikePrice = (parseFloat(option.strikePrice) / 1000000) * Math.pow(10, priceData.expo);
                     const currentPrice = (priceData.price / Math.pow(10, -priceData.expo)).toFixed(6);
-                    
-                    // Determine the color based on option type and price comparison
+
                     const priceColor =
                       option.isCall
                         ? parseFloat(currentPrice) > adjustedStrikePrice ? 'text-green-500' : 'text-red-500'
@@ -223,6 +273,9 @@ export default function Dashboard() {
 
                     return (
                       <tr key={option.id} className="border-b bg-gray-900 hover:bg-gray-600">
+      <td className="w-[80px]  text-center flex items-center justify-center h-[44px]">
+  <div className={`w-4 h-4 rounded-full ${option.isCall ? 'bg-green-500' : 'bg-red-500'}`}></div>
+</td>
                         <td className="w-[134px] text-center">{getSymbolFromPriceId(option.priceId)}</td>
                         <td className={`w-[134px] text-center ${priceColor}`}>
                           {currentPrice}$
@@ -230,7 +283,6 @@ export default function Dashboard() {
                         <td className="w-[134px] text-center">
                           {adjustedStrikePrice.toFixed(6)}$
                         </td>
-                  
                         <td className="w-[134px] text-center">
                           {(parseFloat(option.capPerUnit) / 1000000).toFixed(6)}$
                         </td>
@@ -238,18 +290,19 @@ export default function Dashboard() {
                           {(parseFloat(option.premium) / 1000000).toFixed(6)}$
                         </td>
                         <td className="w-[80px] text-center">
-                          {option.sharesLeft + "/" + option.shares}
+                          {option.sharesLeft}/{option.shares}
                         </td>
                         <td className="w-[120px] text-center">{formatDate(option.expirationDate)}</td>
                         <td className="w-[134px] text-center">
                           {option.responseValue !== null ? option.responseValue : '-'}
                         </td>
+                
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={8} className="text-center">
+                    <td colSpan={9} className="text-center">
                       No options found for the user.
                     </td>
                   </tr>
@@ -262,22 +315,24 @@ export default function Dashboard() {
 
       {/* User-specific holdings */}
       <div
-        className="fixed left-[55%]  top-[200px] bg-gray-800 text-white p-4"
+        className="fixed left-[55%] top-[200px] bg-gray-800 text-white p-4"
         style={{ width: '850px', height: '600px' }}
       >
         <h2 className="text-lg font-bold">Your holdings</h2>
         <div className="w-full bg-black-950">
           <div className="h-[520px] bg-zinc-900 overflow-y-auto scrollbar-hidden">
             <table className="text-[14px] table-auto w-full">
-            <thead className='sticky top-0 bg-zinc-900'>
+              <thead className='sticky top-0 bg-zinc-900'>
                 <tr>
+                  <th>Call/Put</th> {/* New column for Call/Put */}
                   <th>Symbol</th>
                   <th>Current Price</th>
                   <th>Strike Price</th>
                   <th>Expiration Date</th>
                   <th>Cap Per Unit</th>
-                  <th>Owned</th>
-                  <th>Response Value</th> {/* New column for Response Value */}
+                  <th>Units</th>
+                  <th>Response Value</th>
+                  <th>Claim</th>
                 </tr>
               </thead>
               <tbody>
@@ -287,14 +342,16 @@ export default function Dashboard() {
                     const adjustedStrikePrice = (parseFloat(option.strikePrice) / 1000000) * Math.pow(10, priceData.expo);
                     const currentPrice = (priceData.price / Math.pow(10, -priceData.expo)).toFixed(6);
 
-                    // Determine the color based on option type and price comparison
                     const priceColor =
                       option.isCall
                         ? parseFloat(currentPrice) > adjustedStrikePrice ? 'text-green-500' : 'text-red-500'
                         : parseFloat(currentPrice) < adjustedStrikePrice ? 'text-green-500' : 'text-red-500';
 
                     return (
-                      <tr key={option.id} className="border-b bg-gray-900 hover:bg-gray-600">
+                      <tr key={option.priceId} className="border-b bg-gray-900 hover:bg-gray-600">
+                           <td className="w-[80px]  text-center flex items-center justify-center h-[44px]">
+  <div className={`w-4 h-4 rounded-full ${option.isCall ? 'bg-green-500' : 'bg-red-500'}`}></div>
+</td>
                         <td className="w-[134px] text-center">{getSymbolFromPriceId(option.priceId)}</td>
                         <td className={`w-[134px] text-center ${priceColor}`}>
                           {currentPrice}$
@@ -307,11 +364,23 @@ export default function Dashboard() {
                           {(parseFloat(option.capPerUnit) / 1000000).toFixed(6)}$
                         </td>
                         <td className="w-[80px] text-center">
-                          {option.sharesLeft + "/" + option.shares}
+                          {option.units}
                         </td>
                         <td className="w-[134px] text-center">
                           {option.responseValue !== null ? option.responseValue : '-'}
                         </td>
+                        <td className="w-[134px] text-center">
+  {option.hasToPay ? (
+    option.claimed ? (
+      'Claimed'
+    ) : (
+      <button className='border-b hover:bg-gray-700'>Claim</button>
+    )
+  ) : (
+    '-'
+  )}
+</td>
+                       
                       </tr>
                     );
                   })
