@@ -1937,10 +1937,9 @@ contract Optionism is IOptionism, ERC1155 {
     
     IERC20 usdc;
 
-    constructor(address _gelatoAddress)ERC1155(""){
-        usdcAddress = 0x036CbD53842c5426634e7929541eC2318f3dCF7e; // sepolia usdc
-        pyth = IPyth(0xA2aa501b19aff244D90cc15a4Cf739D2725B5729); // pyth address
-        usdc = IERC20(usdcAddress);
+    constructor(address _gelatoAddress, address _pyth, address _mockUsdc)ERC1155(""){
+        pyth = IPyth(_pyth); 
+        usdc = IERC20(_mockUsdc);
         gelatoAddress = _gelatoAddress;
     }
 

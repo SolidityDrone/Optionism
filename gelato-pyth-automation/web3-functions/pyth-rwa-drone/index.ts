@@ -69,13 +69,13 @@ Web3Function.onRun(async (context: Web3FunctionContext) => {
   console.log("Filtered Option IDs for processing:", validOptionIdsArray);
 
 const mockPriceId = "0x9695e2b96ea7b3859da9ed25b7a46a920a776e2fdae19a7bcfdf2b219230452d";
-const mockArray = new Array(validPriceIdsArray.length).fill(mockPriceId);
+const mockArray = new Array(validPriceIdsArray);
 
 console.log(chunkPriceIdsArray);
 
 // Construct the URL with the price IDs
 const baseURL = "https://hermes.pyth.network/v2/updates/price/latest"; // latest/ ?
-const idsQueryString = mockArray.map(id => `ids%5B%5D=${id}`).join("&");
+const idsQueryString = validPriceIdsArray.map((id: any) => `ids%5B%5D=${id}`).join("&");
 const url = `${baseURL}?${idsQueryString}`;
 
 console.log("Query String:", idsQueryString);
@@ -139,7 +139,7 @@ console.log(formattedPriceFeeds);
   );
   });
 
-
+  console.log(encodedItems.length)
   const callData = optionismContract.interface.encodeFunctionData("gelatoCallBack", [
     optionIdsToEncode,
     formattedPriceFeeds,
