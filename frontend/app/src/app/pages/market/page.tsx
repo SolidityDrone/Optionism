@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import OptionsTable from '@/components/Orders';
 import OptionForm from '@/components/WriteOptionForm';
+import TradingViewWidget from '@/components/Tradingview';
 
 interface Option {
   id: string;
@@ -34,7 +35,7 @@ export default function OptionsData() {
   const [priceFeedData, setPriceFeedData] = useState<PriceFeedData | null>(null);
   const [price, setPrice] = useState<String>("");
   const [expo, setExpo] = useState<String>("");
-
+  const [GSymbol, setGSymbol] = useState<String>("");
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -66,7 +67,7 @@ export default function OptionsData() {
         });
 
         const optionsJson = await optionsResponse.json();
-        
+
         if (optionsJson.data && optionsJson.data.options) {
           const callOpts = optionsJson.data.options.filter((option: Option) => option.isCall);
           const putOpts = optionsJson.data.options.filter((option: Option) => !option.isCall);
@@ -80,27 +81,27 @@ export default function OptionsData() {
         // Fetch price feed data from Pyth Network
         if (selectedPriceId) {
           const priceFeedResponse = await fetch(`https://hermes.pyth.network/v2/updates/price/latest?ids%5B%5D=${selectedPriceId}`);
-         
+
           const priceFeedJson = await priceFeedResponse.json();
-          
+
           if (priceFeedJson) {
-            
+
             const priceData = priceFeedJson; // Assuming the first object is the relevant data
             console.log(priceData.parsed[0].price.price);
-            
+
             setPriceFeedData({
               id: selectedPriceId,
               price: priceData.parsed[0].price.price,
               conf: priceData.parsed[0].price.conf,
               expo: priceData.parsed[0].price.expo,
             });
-            setPrice((priceData.parsed[0].price.price * Math.pow(10, priceData.parsed[0].price.expo)).toFixed(4).toString()+"$");
+            setPrice((priceData.parsed[0].price.price * Math.pow(10, priceData.parsed[0].price.expo)).toFixed(4).toString() + "$");
             setExpo(priceData.parsed[0].price.expo);
           } else {
             setPriceFeedData(null);
             setError('No price feed data found');
           }
-   
+
         }
       } catch (err) {
         console.error('Error fetching data:', err);
@@ -125,9 +126,10 @@ export default function OptionsData() {
   return (
     <>
       <Sidebar
-        onSelectPriceId={(id, name) => {
+        onSelectPriceId={(id, name, genericSymbol) => {
           setSelectedPriceId(id);
           setSelectedName(name);
+          setGSymbol(genericSymbol);
         }}
       />
       <OptionsTable
@@ -137,13 +139,17 @@ export default function OptionsData() {
         selectedName={selectedName}
         price={price.toString()}
         expo={expo}
+        gSymbol={GSymbol} // Ensure this is passed correctly
       />
       <OptionForm
         selectedPriceId={selectedPriceId}
         selectedName={selectedName}
         expo={expo}
       />
-     
+
+
+
+
     </>
   );
 }

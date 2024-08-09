@@ -3,7 +3,12 @@ import React, { useEffect, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import OptionsTable from '@/components/Orders';
 import OptionForm from '@/components/WriteOptionForm';
-import { useAccount } from 'wagmi';
+import { OptionismABI, OptionismAddress } from '@/abi/optionism';
+import {
+    useWaitForTransactionReceipt,
+    useWriteContract,
+    useAccount,
+} from 'wagmi';
 
 interface Option {
   id: string;
@@ -21,6 +26,7 @@ interface Option {
 }
 
 interface OptionUnitMapping {
+  opid: string;
   capPerUnit: string;
   expirationDate: string;
   hasToPay: string;
@@ -61,6 +67,13 @@ export default function Dashboard() {
   const [priceFeedSymbolMap, setPriceFeedSymbolMap] = useState<PriceFeedSymbolMap>({});
   const [latestPriceData, setLatestPriceData] = useState<LatestPriceData>({});
 
+  const {
+    data: hash,
+    error: claimerr,
+    isPending,
+    writeContract,
+  } = useWriteContract();
+
   const getSymbolFromPriceId = (priceId: string): string => {
     return priceFeedSymbolMap[priceId.toLowerCase()] || 'Unknown';
   };
@@ -98,6 +111,28 @@ export default function Dashboard() {
       setError('Failed to load latest prices');
     }
   };
+
+  const handleClick = (optionId: string) => {
+  
+    try {
+        writeContract({
+            address: OptionismAddress,
+            abi: OptionismABI,
+            functionName: 'claimOptionWin',
+            args: [BigInt(optionId)],
+        });
+
+        if (error) {
+            console.error('Transaction Error:', error);
+        } else {
+            console.log('Transaction Hash:', hash);
+        }
+    } catch (error) {
+        console.error('Error executing transaction:', error);
+    }
+};
+
+
 
   useEffect(() => {
     const fetchPythData = async () => {
@@ -180,6 +215,7 @@ export default function Dashboard() {
               {
                 optionUnitsMappings(where: {user_contains_nocase: "${account.address}", units_gt: "0"}) {
                   option {
+                  id
                     capPerUnit
                     expirationDate
                     hasToPay
@@ -206,7 +242,8 @@ export default function Dashboard() {
             id: mapping.option.priceId, 
             sharesLeft: mapping.option.shares, 
             units: mapping.units, 
-            claimed: mapping.claimed 
+            claimed: mapping.claimed,
+            opid: mapping.option.id
           }));
 
           setBought(mappings);
@@ -228,7 +265,7 @@ export default function Dashboard() {
     fetchOptionUnitsMappings();
 
     const intervalId = setInterval(() => {
-      fetchData();
+     
       fetchOptionUnitsMappings();
     }, 4000);
 
@@ -263,7 +300,7 @@ export default function Dashboard() {
                 {wrote.length > 0 ? (
                   wrote.map((option) => {
                     const priceData = latestPriceData[option.priceId.toLowerCase()] || { price: 0, expo: 0 };
-                    const adjustedStrikePrice = (parseFloat(option.strikePrice) / 1000000) * Math.pow(10, priceData.expo);
+                    const adjustedStrikePrice = (parseFloat(option.strikePrice) ) / Math.pow(10, -(priceData.expo));
                     const currentPrice = (priceData.price / Math.pow(10, -priceData.expo)).toFixed(6);
 
                     const priceColor =
@@ -294,7 +331,7 @@ export default function Dashboard() {
                         </td>
                         <td className="w-[120px] text-center">{formatDate(option.expirationDate)}</td>
                         <td className="w-[134px] text-center">
-                          {option.responseValue !== null ? option.responseValue : '-'}
+                        {(parseFloat(option.responseValue!) * Math.pow(10, (priceData.expo))) ? (parseFloat(option.responseValue!) * Math.pow(10, (priceData.expo))) : '-'}
                         </td>
                 
                       </tr>
@@ -339,7 +376,7 @@ export default function Dashboard() {
                 {bought.length > 0 ? (
                   bought.map((option) => {
                     const priceData = latestPriceData[option.priceId.toLowerCase()] || { price: 0, expo: 0 };
-                    const adjustedStrikePrice = (parseFloat(option.strikePrice) / 1000000) * Math.pow(10, priceData.expo);
+                    const adjustedStrikePrice = (parseFloat(option.strikePrice) ) / Math.pow(10, -(priceData.expo));
                     const currentPrice = (priceData.price / Math.pow(10, -priceData.expo)).toFixed(6);
 
                     const priceColor =
@@ -367,14 +404,14 @@ export default function Dashboard() {
                           {option.units}
                         </td>
                         <td className="w-[134px] text-center">
-                          {option.responseValue !== null ? option.responseValue : '-'}
+                        {(parseFloat(option.responseValue!) * Math.pow(10, (priceData.expo))) ? (parseFloat(option.responseValue!) * Math.pow(10, (priceData.expo))) : '-'}
                         </td>
                         <td className="w-[134px] text-center">
   {option.hasToPay ? (
     option.claimed ? (
       'Claimed'
     ) : (
-      <button className='border-b hover:bg-gray-700'>Claim</button>
+      <button onClick={()=>{handleClick(option.opid)}} className='border-b hover:bg-gray-700'>Claim</button>
     )
   ) : (
     '-'

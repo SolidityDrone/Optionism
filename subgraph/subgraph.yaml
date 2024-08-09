@@ -6,9 +6,9 @@ dataSources:
     name: optionism
     network: base-sepolia
     source:
-      address: "0x6833Ed0738378EB0A8f07ee593Ed2642CCC44A6a"
+      address: "0xe149D0ca2b81e6C5537bDAE3f9B3D7dD50132b07"
       abi: optionism
-      startBlock: 13489788
+      startBlock: 13689773
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7

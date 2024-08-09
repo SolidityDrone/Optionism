@@ -6,7 +6,7 @@ import { NetworkStatus } from './NetworkStatus'
 
 export function Header() {
   return (
-    <header className='fixed top-0 left-0 w-full z-10 bg-slate-800 flex justify-between items-center'>
+    <header className='fixed top-0 left-0 w-full z-10 bg-head flex justify-between items-center'>
       <LinkComponent href='/'>
         <h1 className='text-xl font-bold'>{SITE_EMOJI}</h1>
       </LinkComponent>

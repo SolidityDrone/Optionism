@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { OptionismABI, OptionismAddress } from '@/abi/optionism';
+import { mockUSDCABI, mockUSDCAddress } from '@/abi/ierc20';
 import {
-        useWaitForTransactionReceipt,
-        useWriteContract,
-        useAccount,
+    useWriteContract,
+    useAccount,
+    useReadContract,
+    useWaitForTransactionReceipt,
 } from 'wagmi';
-import { writeContract } from 'wagmi/actions';
+import TradingViewWidget from './Tradingview';
 
 interface Option {
     id: string;
@@ -25,7 +27,9 @@ interface OptionsTableProps {
     putOptions: Option[];
     loading: boolean;
     selectedName: string | null;
-    price: string | null;
+    price: string;
+    expo: string;
+    gSymbol: string; // Ensure this is included in the props interface
 }
 
 const formatDate = (timestamp: string): string => {
@@ -39,15 +43,35 @@ const formatDate = (timestamp: string): string => {
     return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
 };
 
-const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, loading, selectedName, price, expo}) => {
+const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, loading, selectedName, price, expo, gSymbol }) => {
     const [inputValues, setInputValues] = useState<{ [key: string]: string }>({});
+    const { address: user } = useAccount();
+    const [currentAllowance, setCurrentAllowance] = useState<string>('0');
+
     const {
-        data: hash,
-        isPending,
-        error,
-        writeContract
+        data: approvalTxHash,
+        isPending: isApprovalPending,
+        error: approvalError,
+        writeContract: writeApprovalContract,
     } = useWriteContract();
 
+    const {
+        data: optionTxHash,
+        isPending: isOptionPending,
+        error: optionError,
+        writeContract: writeOptionContract,
+    } = useWriteContract();
+
+    const { data: allowance } = useReadContract({
+        address: mockUSDCAddress,
+        abi: mockUSDCABI,
+        functionName: 'allowance',
+        args: [user as `0x${string}`, OptionismAddress as `0x${string}`]
+    });
+
+    useEffect(() => {
+        setCurrentAllowance(allowance?.toString() || '0');
+    }, [allowance]);
 
     const handleInputChange = (id: string, value: string) => {
         setInputValues(prev => ({ ...prev, [id]: value }));
@@ -59,48 +83,70 @@ const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, lo
         console.log('Amount:', amount);
 
         if (amount) {
+            const premiumCost = (parseFloat(callOptions.find(option => option.id === id)?.premium || '0') * parseFloat(amount)).toString();
+            if (BigInt(currentAllowance) > BigInt(premiumCost)) {
+                try {
+                    // Approve transaction
+                    await writeApprovalContract({
+                        address: mockUSDCAddress,
+                        abi: mockUSDCABI,
+                        functionName: 'approve',
+                        args: [OptionismAddress as `0x${string}`, BigInt(premiumCost)]
+                    });
+
+                    if (approvalError) {
+                        console.error('Approval Transaction Error:', approvalError);
+                        return;
+                    }
+
+                    // Wait for the approval transaction to be confirmed
+                    if (approvalTxHash) {
+                        await useWaitForTransactionReceipt({ hash: approvalTxHash });
+                    }
+
+                    console.log('Approval Transaction Hash:', approvalTxHash);
+                } catch (error) {
+                    console.error('Error executing approval transaction:', error);
+                    return;
+                }
+            }
+
+            // Proceed with the option buy transaction
             try {
-                writeContract({
+                await writeOptionContract({
                     address: OptionismAddress,
                     abi: OptionismABI,
                     functionName: 'buyOption',
-                    args: [BigInt(id), BigInt(inputValues[id])],
+                    args: [BigInt(id), BigInt(amount)],
                 });
 
-                if (error) {
-                    console.error('Transaction Error:', error);
+                if (optionError) {
+                    console.error('Transaction Error:', optionError);
                 } else {
-                    console.log('Transaction Hash:', hash);
+                    console.log('Transaction Hash:', optionTxHash);
                 }
             } catch (error) {
-                console.error('Error executing transaction:', error);
+                console.error('Error executing option transaction:', error);
             }
         } else {
             console.error('No amount entered.');
         }
     };
 
-    useEffect(() => {
-        if (isPending) {
-            console.log("pending");
-        } else {
-            console.log("not pending");
-        }
-    }, [isPending])
-
-
     return (
-        <div className="fixed top-0 left-56 p-4 flex mt-10 flex-col gap-4">
-
+        <>          
+        <div className="fixed bg-tv top-0 left-56 p-4 flex mt-10 flex-col gap-4">
+     
             <h2 className="text-lg font-bold">Selected asset: {selectedName ? selectedName : "Void"} - Current price: {price}</h2>
 
    
             {/* Wrapper for both tables */}
             <div className="border border-gray-300 rounded-lg overflow-hidden">
+            <TradingViewWidget gSymbol={gSymbol!} />  
                 <div className="flex text-[14px] flex-col">
                     {/* Call Options Table (Entries start from the bottom) */}
                     <div className="w-[1200px]">
-                        <div className="h-[370px] bg-zinc-900 overflow-y-auto scrollbar-hidden flex flex-col-reverse">
+                        <div className="h-[220px] bg-tv overflow-y-auto scrollbar-hidden flex flex-col-reverse">
                             <table className="table-auto bg-black-950 w-full ">
                                 <tbody>
                                     {callOptions.length > 0 ? (
@@ -114,7 +160,7 @@ const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, lo
                                                 <td className="w-[80px] text-center">
                                                     {option.sharesLeft + "/" + option.shares}
                                                 </td>
-                                                <td className="w-[134px] text-center">{((parseFloat(option.strikePrice) / 1000000) * Math.pow(10, expo) ).toFixed(6)}$</td>
+                                                <td className="w-[134px] text-center">{parseFloat(option.strikePrice) * Math.pow(10, expo) }$</td>
                                                 <td className="w-[154px] text-center">
                                                     <div className="flex items-center justify-center gap-2">
                                                         <input
@@ -173,7 +219,7 @@ const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, lo
 
                     {/* Put Options Table */}
                     <div className="w-full bg-black-950">
-                        <div className="h-[370px] bg-zinc-900 overflow-y-auto scrollbar-hidden">
+                        <div className="h-[220px] bg-tv overflow-y-auto scrollbar-hidden">
                             <table className="table-auto w-full">
                                 <tbody>
                                     {putOptions.length > 0 ? (
@@ -223,6 +269,7 @@ const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, lo
                                             </td>
                                         </tr>
                                     )}
+                                    
                                 </tbody>
                             </table>
                         </div>
@@ -230,6 +277,7 @@ const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, lo
                 </div>
             </div>
         </div>
+        </>
     );
 };
 

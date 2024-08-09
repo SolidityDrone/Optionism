@@ -8,10 +8,11 @@ interface Asset {
   asset_type: AssetType;
   symbol: string;
   priceId: string;
+  generic_symbol: string;
 }
 
 interface SidebarProps {
-  onSelectPriceId: (priceId: string, description: string) => void;
+  onSelectPriceId: (priceId: string, description: string, gsymbol: string) => void;
 }
 
 export default function Sidebar({ onSelectPriceId }: SidebarProps) {
@@ -51,7 +52,8 @@ export default function Sidebar({ onSelectPriceId }: SidebarProps) {
             const description = item.attributes.description;
             const symbol = item.attributes.symbol;
             const priceId = "0x"+item.id;
-            const asset = { description, symbol, asset_type: assetType, priceId};
+            const genericSymbol = item.attributes.generic_symbol;
+            const asset = { description, symbol, asset_type: assetType, priceId, generic_symbol: genericSymbol};
             
             switch (assetType.toString()) {
               case 'Commodities':
@@ -99,15 +101,16 @@ export default function Sidebar({ onSelectPriceId }: SidebarProps) {
     }));
   };
 
-  const handleItemClick = (priceId: string, description: string) => {
-    console.log('Selected Price ID:', priceId); // Add this line to debug
-    onSelectPriceId(priceId, description);
+  const handleItemClick = (priceId: string, description: string, gSymbol: string) => {
+   
+    onSelectPriceId(priceId, description, gSymbol);
     setSelected(priceId);
+  
   };
 
   return (
     <div className="flex h-screen mt-10">
-      <aside className="fixed left-0 h-full w-56 bg-base-200 overflow-y-auto scrollbar-hidden">
+      <aside className="fixed bg-tv left-0 h-full w-56 bg-base-200 overflow-y-auto scrollbar-hidden">
         <h4 className="text-lg pl-2 pt-2 font-bold mb-2 mt-2">Assets</h4>
         {['Equity', 'Crypto', 'FX', 'Metal', 'Rates', 'Commodities'].map((type) => (
           <div className="mb-4 pl-2 pr-2" key={type}>
@@ -137,14 +140,14 @@ export default function Sidebar({ onSelectPriceId }: SidebarProps) {
                     <li key={index} className={`py-2 ${index > 0 ? 'border-t border-gray-500' : ''}`}>
                      {selected == asset.priceId ? (<a
                         href="#"
-                        onClick={() => handleItemClick(asset.priceId, asset.description)}
+                        onClick={() => handleItemClick(asset.priceId, asset.description, asset.generic_symbol)}
                         className="block py-2 bg-gray-700 hover:text-white transition-colors duration-200"
                       >
                         <span className="block text-[12px] ">{asset.symbol}</span>
                         <span className="block text-[8px] ">{asset.description}</span>
                       </a>) : (<a
                         href="#"
-                        onClick={() => handleItemClick(asset.priceId, asset.description)}
+                        onClick={() => handleItemClick(asset.priceId, asset.description, asset.generic_symbol)}
                         className="block py-2 hover:bg-gray-800 hover:text-white transition-colors duration-200"
                       >
                         <span className="block text-[12px] ">{asset.symbol}</span>

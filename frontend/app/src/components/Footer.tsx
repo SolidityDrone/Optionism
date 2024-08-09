@@ -5,7 +5,7 @@ import { LinkComponent } from './LinkComponent'
 
 export function Footer() {
   return (
-    <footer className='fixed bottom-0 left-0 w-full bg-neutral text-neutral-content p-4 flex justify-between items-center'>
+    <footer className='fixed bg-head bottom-0 left-0 w-full  text-neutral-content p-4 flex justify-between items-center'>
       <p>
         {SITE_EMOJI} {SITE_INFO}
       </p>
