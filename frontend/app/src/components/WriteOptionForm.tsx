@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from 'react';
+import TransactionModal from '@/components/TransactionModal'; // import the Modal component
 import { OptionismABI, OptionismAddress } from '@/abi/optionism';
 import { mockUSDCABI, mockUSDCAddress } from '@/abi/ierc20';
 import {
@@ -26,7 +27,7 @@ const OptionForm: React.FC<OptionFormProps> = ({ selectedPriceId, selectedName, 
     const [expiry, setExpiry] = useState<string>('');
     const [deadline, setDeadline] = useState<string>('');
     const [currentAllowance, setCurrentAllowance] = useState<string>('');
-    const [pending, setPending] = useState<boolean>(false);
+    const [txing, setTxing] = useState<boolean>(false);
 
     const {
         data: approvalTxHash,
@@ -36,7 +37,7 @@ const OptionForm: React.FC<OptionFormProps> = ({ selectedPriceId, selectedName, 
     } = useWriteContract();
 
     const {
-        data: optionTxHash,
+        data: hash,
         isPending: isOptionPending,
         error: optionError,
         writeContract: writeOptionContract,
@@ -48,16 +49,36 @@ const OptionForm: React.FC<OptionFormProps> = ({ selectedPriceId, selectedName, 
         functionName: 'allowance',
         args: [user as `0x${string}`, OptionismAddress as `0x${string}`]
     });
+    const { isLoading: isConfirming, isSuccess: isConfirmed } =
+        useWaitForTransactionReceipt({ hash });
 
     useEffect(() => {
-        console.log("Allowance:", allowance);
         setCurrentAllowance(allowance?.toString() || '0');
     }, [allowance]);
+
+    useEffect(() => {
+        let timeoutId: NodeJS.Timeout;
+
+        if (isConfirming || isOptionPending) {
+            setTxing(true);
+        }
+
+        if (isConfirmed||optionError) {
+            // Set a 3-second delay before setting txing to false
+            timeoutId = setTimeout(() => {
+                setTxing(false);
+            }, 3000);
+        }
+
+        // Clean up the timeout if the component unmounts or the effect re-runs
+        return () => clearTimeout(timeoutId);
+    }, [isConfirming, isConfirmed, isOptionPending, optionError]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Convert values to appropriate formats
+
+
         const formattedMaxPayout = (parseFloat(maxPayout) * 1e6).toString();
         const expoWiseStrikePrice = parseFloat(strikePrice) / Math.pow(10, parseInt(expo));
         const formattedPremiumCost = (parseFloat(premiumCost) * 1e6).toString();
@@ -72,18 +93,15 @@ const OptionForm: React.FC<OptionFormProps> = ({ selectedPriceId, selectedName, 
                 });
 
                 if (approvalError) {
-                    console.error('Approval Transaction Error:', approvalError);
+
                     return;
                 }
 
-                // Wait for the approval transaction to be confirmed
                 if (approvalTxHash) {
-                    await useWaitForTransactionReceipt({ hash: approvalTxHash });
+                    const result = useWaitForTransactionReceipt({ hash: approvalTxHash });
                 }
-
-                console.log('Approval Transaction Hash:', approvalTxHash);
             } catch (error) {
-                console.error('Error executing approval transaction:', error);
+
                 return;
             }
         }
@@ -106,15 +124,14 @@ const OptionForm: React.FC<OptionFormProps> = ({ selectedPriceId, selectedName, 
             });
 
             if (optionError) {
-                console.error('Option Transaction Error:', optionError);
+
             } else {
-                console.log('Option Transaction Hash:', optionTxHash);
+
             }
         } catch (error) {
-            console.error('Error executing option transaction:', error);
+
         }
     };
-
     useEffect(() => {
         if (isOptionPending) {
             console.log('Option transaction pending');
@@ -136,7 +153,7 @@ const OptionForm: React.FC<OptionFormProps> = ({ selectedPriceId, selectedName, 
 
     return (
         <div className="fixed top-48 right-14 p-4 w-[340px] border border-gray-600 rounded-lg bg-tv  shadow-md">
-          
+
             <form onSubmit={handleSubmit} className="space-y-3">
                 <div className="mb-4">
                     <div className="flex items-center justify-between">
@@ -214,8 +231,113 @@ const OptionForm: React.FC<OptionFormProps> = ({ selectedPriceId, selectedName, 
                     className="bg-blue-500 text-white rounded px-3 py-1 hover:bg-blue-600 text-sm"
                 >
                     Write
-                </button> 
+                </button>
             </form>
+            {txing && (<div className="fixed top-0 right-0 w-screen h-screen flex items-center justify-center backdrop-blur-[1px] bg-gray-900 bg-opacity-30 z-20">
+                <div className="bg-primary fixed absolute top-50 right-50 items-center  text-center text-sm rounded-lg z-20 p-6 h-36 w-80">
+
+                    {txing && (
+                        <div className="fixed top-0 right-0 w-screen h-screen flex items-center justify-center backdrop-blur-[1px] bg-tv bg-opacity-30 z-20">
+                            <div className="bg-tv fixed absolute top-50 right-50 items-center text-center text-sm rounded-lg z-20 p-6 h-36 w-80">
+
+                                {!isConfirmed && !optionError ? (
+                                    <span className="loading loading-color loading-ring text-success mb-4 loading-lg"></span>
+                                ) : !optionError ? (
+                                    <div className="flex mb-2 items-center justify-center">
+                                        <div
+                                            className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center"
+                                            style={{
+                                                animation: `scaleOpacityAnimation 0.4s ease-out forwards`,
+                                                transformOrigin: 'center',
+                                                transform: 'scale(0)',
+                                                opacity: 0,
+                                            }}
+                                        >
+                                            <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        </div>
+                                        <style>{`
+                        @keyframes scaleOpacityAnimation {
+                        0% {
+                            transform: scale(0);
+                            opacity: 0;
+                        }
+                        65% {
+                            opacity: 0.5;
+                        }
+                        100% {
+                            transform: scale(0.6);
+                            opacity: 1;
+                        }
+                        }
+                    `}
+                                        </style>
+                                    </div>
+                                ) : (
+                                    <div className="flex mb-2 items-center justify-center">
+                                        <div
+                                            className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center"
+                                            style={{
+                                                animation: `scaleOpacityAnimation 0.7s ease-out forwards`,
+                                                transformOrigin: 'center',
+                                                transform: 'scale(0)',
+                                                opacity: 0,
+                                            }}
+                                        >
+                                            <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </div>
+                                        <style>{`
+                    @keyframes scaleOpacityAnimation {
+                    0% {
+                        transform: scale(0);
+                        opacity: 0;
+                    }
+                    65% {
+                        opacity: 0.5;
+                    }
+                    100% {
+                        transform: scale(0.6);
+                        opacity: 1;
+                    }
+                    }
+                `}
+                                        </style>
+                                    </div>
+                                )}
+
+                                {txing && !isConfirming && !optionError && !isConfirmed && (
+                                    <div>Waiting for user confirmation . . .</div>
+                                )}
+                                {isConfirming && !optionError && (
+                                    <div>Waiting for confirmation...</div>
+                                )}
+
+                                {isConfirmed && <div>Transaction confirmed.</div>}
+                                {hash && (
+                                    <div className='mt-2'>
+                                        <a
+                                            className='bg-slate-200 border border-slate-400 p-0.5 px-1 rounded-md inline-block'
+                                            href={`https://base-sepolia.blockscout.com/tx/${hash}`}
+                                            target="_blank" rel="noopener noreferrer"
+                                        >
+                                            View on Explorer
+                                        </a>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                </div>
+
+            </div>
+            )}
+
+
+
         </div>
     );
 };

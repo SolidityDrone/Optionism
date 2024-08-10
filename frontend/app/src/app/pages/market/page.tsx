@@ -87,8 +87,7 @@ export default function OptionsData() {
           if (priceFeedJson) {
 
             const priceData = priceFeedJson; // Assuming the first object is the relevant data
-            console.log(priceData.parsed[0].price.price);
-
+ 
             setPriceFeedData({
               id: selectedPriceId,
               price: priceData.parsed[0].price.price,

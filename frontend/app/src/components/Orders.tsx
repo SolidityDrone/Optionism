@@ -47,6 +47,8 @@ const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, lo
     const [inputValues, setInputValues] = useState<{ [key: string]: string }>({});
     const { address: user } = useAccount();
     const [currentAllowance, setCurrentAllowance] = useState<string>('0');
+    const [txing, setTxing] = useState<boolean>(false);
+
 
     const {
         data: approvalTxHash,
@@ -56,11 +58,15 @@ const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, lo
     } = useWriteContract();
 
     const {
-        data: optionTxHash,
+        data: hash,
         isPending: isOptionPending,
         error: optionError,
         writeContract: writeOptionContract,
     } = useWriteContract();
+
+    const { isLoading: isConfirming, isSuccess: isConfirmed } =
+        useWaitForTransactionReceipt({ hash });
+
 
     const { data: allowance } = useReadContract({
         address: mockUSDCAddress,
@@ -76,18 +82,34 @@ const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, lo
     const handleInputChange = (id: string, value: string) => {
         setInputValues(prev => ({ ...prev, [id]: value }));
     };
+    useEffect(() => {
+        let timeoutId: NodeJS.Timeout;
+
+        if (isConfirming || isOptionPending) {
+            setTxing(true);
+        }
+
+        if (isConfirmed || optionError) {
+            // Set a 3-second delay before setting txing to false
+            timeoutId = setTimeout(() => {
+                setTxing(false);
+            }, 3000);
+        }
+
+        // Clean up the timeout if the component unmounts or the effect re-runs
+        return () => clearTimeout(timeoutId);
+    }, [isConfirming, isConfirmed, isOptionPending, optionError]);
 
     const handleSubmit = async (id: string) => {
         const amount = inputValues[id];
-        console.log('Option ID:', id);
-        console.log('Amount:', amount);
-
+   
         if (amount) {
             const premiumCost = (parseFloat(callOptions.find(option => option.id === id)?.premium || '0') * parseFloat(amount)).toString();
-            if (BigInt(currentAllowance) > BigInt(premiumCost)) {
+
+            if (BigInt(currentAllowance) < BigInt(premiumCost)) {
                 try {
                     // Approve transaction
-                    await writeApprovalContract({
+                    writeApprovalContract({
                         address: mockUSDCAddress,
                         abi: mockUSDCABI,
                         functionName: 'approve',
@@ -101,9 +123,9 @@ const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, lo
 
                     // Wait for the approval transaction to be confirmed
                     if (approvalTxHash) {
-                        await useWaitForTransactionReceipt({ hash: approvalTxHash });
+                        useWaitForTransactionReceipt({ hash: approvalTxHash });
                     }
-
+                    console.log('Allowance post ap tx', currentAllowance);
                     console.log('Approval Transaction Hash:', approvalTxHash);
                 } catch (error) {
                     console.error('Error executing approval transaction:', error);
@@ -113,7 +135,7 @@ const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, lo
 
             // Proceed with the option buy transaction
             try {
-                await writeOptionContract({
+                writeOptionContract({
                     address: OptionismAddress,
                     abi: OptionismABI,
                     functionName: 'buyOption',
@@ -124,6 +146,7 @@ const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, lo
                     console.error('Transaction Error:', optionError);
                 } else {
                     console.log('Transaction Hash:', optionTxHash);
+                    console.log('Allowance post op tx', currentAllowance);
                 }
             } catch (error) {
                 console.error('Error executing option transaction:', error);
@@ -134,149 +157,252 @@ const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, lo
     };
 
     return (
-        <>          
-        <div className="fixed bg-tv top-0 left-56 p-4 flex mt-10 flex-col gap-4">
-     
-            <h2 className="text-lg font-bold">Selected asset: {selectedName ? selectedName : "Void"} - Current price: {price}</h2>
+        <>
+            <div className="fixed bg-tv top-0 left-56 p-4 flex mt-10 flex-col gap-4">
 
-   
-            {/* Wrapper for both tables */}
-            <div className="border border-gray-300 rounded-lg overflow-hidden">
-            <TradingViewWidget gSymbol={gSymbol!} />  
-                <div className="flex text-[14px] flex-col">
-                    {/* Call Options Table (Entries start from the bottom) */}
-                    <div className="w-[1200px]">
-                        <div className="h-[220px] bg-tv overflow-y-auto scrollbar-hidden flex flex-col-reverse">
-                            <table className="table-auto bg-black-950 w-full ">
-                                <tbody>
-                                    {callOptions.length > 0 ? (
-                                        callOptions.map((option) => (
-                                            <tr key={option.id} className="border-b  bg-green-900 hover:bg-green-700">
-                                                <td className="w-[60px] text-center">{option.id}</td>
-                                                <td className="w-[134px] text-center">{(parseFloat(option.premium) / 1000000).toFixed(6)}$</td>
-                                                <td className="w-[134px] text-center">{(parseFloat(option.capPerUnit) / 1000000).toFixed(6)}$</td>
-                                                <td className="w-[120px] text-center">{formatDate(option.deadlineDate)}</td>
-                                                <td className="w-[120px] text-center">{formatDate(option.expirationDate)}</td>
-                                                <td className="w-[80px] text-center">
-                                                    {option.sharesLeft + "/" + option.shares}
-                                                </td>
-                                                <td className="w-[134px] text-center">{parseFloat(option.strikePrice) * Math.pow(10, expo) }$</td>
-                                                <td className="w-[154px] text-center">
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        <input
-                                                            type="text"
-                                                            className="border rounded h-[22px] px-2 py-1 w-[58px] text-center"
-                                                            placeholder="qty"
-                                                            value={inputValues[option.id] || ''}
-                                                            onChange={(e) => handleInputChange(option.id, e.target.value)}
-                                                        />
-                                                          <button
-                                                            className="bg-gray-900 text-white rounded h-[22px] px-4 w-[144px] flex items-center justify-center hover:bg-gray-800"
-                                                            onClick={() => handleSubmit(option.id)}
-                                                        >
-                                                            Pay {(() => {
-                                                                const premium = parseFloat(option.premium) / 1000000;
-                                                                const inputValue = parseFloat(inputValues[option.id]);
+                <h2 className="text-lg font-bold">Selected asset: {selectedName ? selectedName : "Void"} - Current price: {price}</h2>
 
-                                                                if (!isNaN(premium) && !isNaN(inputValue)) {
-                                                                    return (premium * inputValue).toFixed(2).toString() + "$";
-                                                                } else {
-                                                                    return '';
-                                                                }
-                                                            })()}
-                                                        </button>
-                                                    </div>
+
+                {/* Wrapper for both tables */}
+                <div className="border border-gray-300 rounded-lg overflow-hidden">
+                    <TradingViewWidget gSymbol={gSymbol!} />
+                    <div className="flex text-[14px] flex-col">
+                        {/* Call Options Table (Entries start from the bottom) */}
+                        <div className="w-[1200px]">
+                            <div className="h-[220px] bg-tv overflow-y-auto scrollbar-hidden flex flex-col-reverse">
+                                <table className="table-auto bg-black-950 w-full ">
+                                    <tbody>
+                                        {callOptions.length > 0 ? (
+                                            callOptions.map((option) => (
+                                                <tr key={option.id} className="border-b  bg-green-900 hover:bg-green-700">
+                                                    <td className="w-[60px] text-center">{option.id}</td>
+                                                    <td className="w-[134px] text-center">{(parseFloat(option.premium) / 1000000).toFixed(6)}$</td>
+                                                    <td className="w-[134px] text-center">{(parseFloat(option.capPerUnit) / 1000000).toFixed(6)}$</td>
+                                                    <td className="w-[120px] text-center">{formatDate(option.deadlineDate)}</td>
+                                                    <td className="w-[120px] text-center">{formatDate(option.expirationDate)}</td>
+                                                    <td className="w-[80px] text-center">
+                                                        {option.sharesLeft + "/" + option.shares}
+                                                    </td>
+                                                    <td className="w-[134px] text-center">{parseFloat(option.strikePrice) * Math.pow(10, expo)}$</td>
+                                                    <td className="w-[154px] text-center">
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            <input
+                                                                type="text"
+                                                                className="border rounded h-[22px] px-2 py-1 w-[58px] text-center"
+                                                                placeholder="qty"
+                                                                value={inputValues[option.id] || ''}
+                                                                onChange={(e) => handleInputChange(option.id, e.target.value)}
+                                                            />
+                                                            <button
+                                                                className="bg-gray-900 text-white rounded h-[22px] px-4 w-[144px] flex items-center justify-center hover:bg-gray-800"
+                                                                onClick={() => handleSubmit(option.id)}
+                                                            >
+                                                                Pay {(() => {
+                                                                    const premium = parseFloat(option.premium) / 1000000;
+                                                                    const inputValue = parseFloat(inputValues[option.id]);
+
+                                                                    if (!isNaN(premium) && !isNaN(inputValue)) {
+                                                                        return (premium * inputValue).toFixed(2).toString() + "$";
+                                                                    } else {
+                                                                        return '';
+                                                                    }
+                                                                })()}
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan={9} className="text-center py-2">
+                                                    No option published for that market
                                                 </td>
                                             </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan={9} className="text-center py-2">
-                                                No option published for that market
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                    </div>
 
-                    {/* Shared Header */}
-                    <table className="table-auto bg-black-950">
-                        <thead className="bg-black-800">
-                            <tr>
-                                <th className='w-[60px]'>ID</th>
-                                <th className='w-[154px]'>Premium price</th>
-                                <th className='w-[134px]'>Cap per unit</th>
-                                <th className='w-[134px]'>Deadline Date</th>
-                                <th className='w-[134px]'>Expiration Date</th>
-                                <th className='w-[80px]'>Shares Left</th>
-                                <th className='w-[134px]'>Strike Price</th>
-                                <th className='w-[234px]'>Action</th>
-                            </tr>
-                        </thead>
-                    </table>
+                        {/* Shared Header */}
+                        <table className="table-auto bg-black-950">
+                            <thead className="bg-black-800">
+                                <tr>
+                                    <th className='w-[60px]'>ID</th>
+                                    <th className='w-[154px]'>Premium price</th>
+                                    <th className='w-[134px]'>Cap per unit</th>
+                                    <th className='w-[134px]'>Deadline Date</th>
+                                    <th className='w-[134px]'>Expiration Date</th>
+                                    <th className='w-[80px]'>Shares Left</th>
+                                    <th className='w-[134px]'>Strike Price</th>
+                                    <th className='w-[234px]'>Action</th>
+                                </tr>
+                            </thead>
+                        </table>
 
-                    {/* Put Options Table */}
-                    <div className="w-full bg-black-950">
-                        <div className="h-[220px] bg-tv overflow-y-auto scrollbar-hidden">
-                            <table className="table-auto w-full">
-                                <tbody>
-                                    {putOptions.length > 0 ? (
-                                        putOptions.map((option) => (
-                                            <tr key={option.id} className="border-b bg-red-900 hover:bg-red-700">
-                                                <td className="w-[60px] text-center">{option.id}</td>
-                                                <td className="w-[134px] text-center">{(parseFloat(option.premium) / 1000000).toFixed(6)}$</td>
-                                                <td className="w-[134px] text-center">{(parseFloat(option.capPerUnit) / 1000000).toFixed(6)}$</td>
-                                                <td className="w-[120px] text-center">{formatDate(option.deadlineDate)}</td>
-                                                <td className="w-[120px] text-center">{formatDate(option.expirationDate)}</td>
-                                                <td className="w-[80px] text-center">
-                                                    {option.sharesLeft + "/" + option.shares}
-                                                </td>
-                                                <td className="w-[134px] text-center">{((parseFloat(option.strikePrice) / 1000000) * Math.pow(10, expo) ).toFixed(6)}$</td>
-                                                <td className="w-[154px] text-center">
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        <input
-                                                            type="text"
-                                                            className="border rounded h-[22px] px-2 py-1 w-[58px] text-center"
-                                                            placeholder="qty"
-                                                            value={inputValues[option.id] || ''}
-                                                            onChange={(e) => handleInputChange(option.id, e.target.value)}
-                                                        />
-                                                        <button
-                                                            className="bg-gray-900 text-white rounded h-[22px] px-4 w-[144px] flex items-center justify-center hover:bg-gray-800"
-                                                            onClick={() => handleSubmit(option.id)}
-                                                        >
-                                                            Pay {(() => {
-                                                                const premium = parseFloat(option.premium) / 1000000;
-                                                                const inputValue = parseFloat(inputValues[option.id]);
+                        {/* Put Options Table */}
+                        <div className="w-full bg-black-950">
+                            <div className="h-[220px] bg-tv overflow-y-auto scrollbar-hidden">
+                                <table className="table-auto w-full">
+                                    <tbody>
+                                        {putOptions.length > 0 ? (
+                                            putOptions.map((option) => (
+                                                <tr key={option.id} className="border-b bg-red-900 hover:bg-red-700">
+                                                    <td className="w-[60px] text-center">{option.id}</td>
+                                                    <td className="w-[134px] text-center">{(parseFloat(option.premium) / 1000000).toFixed(6)}$</td>
+                                                    <td className="w-[134px] text-center">{(parseFloat(option.capPerUnit) / 1000000).toFixed(6)}$</td>
+                                                    <td className="w-[120px] text-center">{formatDate(option.deadlineDate)}</td>
+                                                    <td className="w-[120px] text-center">{formatDate(option.expirationDate)}</td>
+                                                    <td className="w-[80px] text-center">
+                                                        {option.sharesLeft + "/" + option.shares}
+                                                    </td>
+                                                    <td className="w-[134px] text-center">{parseFloat(option.strikePrice) * Math.pow(10, expo)}$</td>
+                                                    <td className="w-[154px] text-center">
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            <input
+                                                                type="text"
+                                                                className="border rounded h-[22px] px-2 py-1 w-[58px] text-center"
+                                                                placeholder="qty"
+                                                                value={inputValues[option.id] || ''}
+                                                                onChange={(e) => handleInputChange(option.id, e.target.value)}
+                                                            />
+                                                            <button
+                                                                className="bg-gray-900 text-white rounded h-[22px] px-4 w-[144px] flex items-center justify-center hover:bg-gray-800"
+                                                                onClick={() => handleSubmit(option.id)}
+                                                            >
+                                                                Pay {(() => {
+                                                                    const premium = parseFloat(option.premium) / 1000000;
+                                                                    const inputValue = parseFloat(inputValues[option.id]);
 
-                                                                if (!isNaN(premium) && !isNaN(inputValue)) {
-                                                                    return (premium * inputValue).toFixed(2).toString() + "$";
-                                                                } else {
-                                                                    return '';
-                                                                }
-                                                            })()}
-                                                        </button>
-                                                    </div>
+                                                                    if (!isNaN(premium) && !isNaN(inputValue)) {
+                                                                        return (premium * inputValue).toFixed(2).toString() + "$";
+                                                                    } else {
+                                                                        return '';
+                                                                    }
+                                                                })()}
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan={9} className="text-center py-2">
+                                                    No option published for that market
                                                 </td>
                                             </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan={9} className="text-center py-2">
-                                                No option published for that market
-                                            </td>
-                                        </tr>
-                                    )}
-                                    
-                                </tbody>
-                            </table>
+                                        )}
+
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
+              
             </div>
-        </div>
+            {txing && (<div className="fixed top-0 right-0 w-screen h-screen flex items-center justify-center backdrop-blur-[1px] bg-gray-900 bg-opacity-30 z-20">
+                <div className="bg-primary fixed absolute top-50 right-50 items-center  text-center text-sm rounded-lg z-20 p-6 h-36 w-80">
+
+                    {txing && (
+                        <div className="fixed top-0 right-0 w-screen h-screen flex items-center justify-center backdrop-blur-[1px] bg-tv bg-opacity-30 z-20">
+                            <div className="bg-tv fixed absolute top-50 right-50 items-center text-center text-sm rounded-lg z-20 p-6 h-36 w-80">
+
+                                {!isConfirmed && !optionError ? (
+                                    <span className="loading loading-color loading-ring text-success mb-4 loading-lg"></span>
+                                ) : !optionError ? (
+                                    <div className="flex mb-2 items-center justify-center">
+                                        <div
+                                            className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center"
+                                            style={{
+                                                animation: `scaleOpacityAnimation 0.4s ease-out forwards`,
+                                                transformOrigin: 'center',
+                                                transform: 'scale(0)',
+                                                opacity: 0,
+                                            }}
+                                        >
+                                            <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        </div>
+                                        <style>{`
+                        @keyframes scaleOpacityAnimation {
+                        0% {
+                            transform: scale(0);
+                            opacity: 0;
+                        }
+                        65% {
+                            opacity: 0.5;
+                        }
+                        100% {
+                            transform: scale(0.6);
+                            opacity: 1;
+                        }
+                        }
+                    `}
+                                        </style>
+                                    </div>
+                                ) : (
+                                    <div className="flex mb-2 items-center justify-center">
+                                        <div
+                                            className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center"
+                                            style={{
+                                                animation: `scaleOpacityAnimation 0.7s ease-out forwards`,
+                                                transformOrigin: 'center',
+                                                transform: 'scale(0)',
+                                                opacity: 0,
+                                            }}
+                                        >
+                                            <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </div>
+                                        <style>{`
+                    @keyframes scaleOpacityAnimation {
+                    0% {
+                        transform: scale(0);
+                        opacity: 0;
+                    }
+                    65% {
+                        opacity: 0.5;
+                    }
+                    100% {
+                        transform: scale(0.6);
+                        opacity: 1;
+                    }
+                    }
+                `}
+                                        </style>
+                                    </div>
+                                )}
+
+                                {txing && !isConfirming && !optionError && !isConfirmed && (
+                                    <div>Waiting for user confirmation . . .</div>
+                                )}
+                                {isConfirming && !optionError && (
+                                    <div>Waiting for confirmation...</div>
+                                )}
+
+                                {isConfirmed && <div>Transaction confirmed.</div>}
+                                {hash && (
+                                    <div className='mt-2'>
+                                        <a
+                                            className='bg-slate-200 border border-slate-400 p-0.5 px-1 rounded-md inline-block'
+                                            href={`https://base-sepolia.blockscout.com/tx/${hash}`}
+                                            target="_blank" rel="noopener noreferrer"
+                                        >
+                                            View on Explorer
+                                        </a>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                </div>
+
+            </div>
+            )}
         </>
     );
 };
