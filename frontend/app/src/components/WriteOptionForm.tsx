@@ -28,6 +28,8 @@ const OptionForm: React.FC<OptionFormProps> = ({ selectedPriceId, selectedName, 
     const [deadline, setDeadline] = useState<string>('');
     const [currentAllowance, setCurrentAllowance] = useState<string>('');
     const [txing, setTxing] = useState<boolean>(false);
+    const [phase, setPhase] = useState<Number>(0);
+
 
     const {
         data: approvalTxHash,
@@ -37,108 +39,128 @@ const OptionForm: React.FC<OptionFormProps> = ({ selectedPriceId, selectedName, 
     } = useWriteContract();
 
     const {
-        data: hash,
+        data: optionTxHash,
         isPending: isOptionPending,
         error: optionError,
         writeContract: writeOptionContract,
     } = useWriteContract();
+    
+    // fuck wagmi stupid readContract
+    // const { data: allowance } = useReadContract({
+    //     address: mockUSDCAddress,
+    //     abi: mockUSDCABI,
+    //     functionName: 'allowance',
+    //     args: [user as `0x${string}`, OptionismAddress as `0x${string}`]
+    // });
 
-    const { data: allowance } = useReadContract({
-        address: mockUSDCAddress,
-        abi: mockUSDCABI,
-        functionName: 'allowance',
-        args: [user as `0x${string}`, OptionismAddress as `0x${string}`]
-    });
-    const { isLoading: isConfirming, isSuccess: isConfirmed } =
-        useWaitForTransactionReceipt({ hash });
 
-    useEffect(() => {
-        setCurrentAllowance(allowance?.toString() || '0');
-    }, [allowance]);
+    const { isLoading: isOptionConfirming, isSuccess: isOptionConfirmed } =
+        useWaitForTransactionReceipt({ hash: optionTxHash });
+
+    const { isLoading: isApprovalConfirming, isSuccess: isApprovalConfirmed } =
+        useWaitForTransactionReceipt({ hash: approvalTxHash });
+
 
     useEffect(() => {
         let timeoutId: NodeJS.Timeout;
 
-        if (isConfirming || isOptionPending) {
-            setTxing(true);
-        }
-
-        if (isConfirmed||optionError) {
-            // Set a 3-second delay before setting txing to false
-            timeoutId = setTimeout(() => {
-                setTxing(false);
-            }, 3000);
-        }
-
-        // Clean up the timeout if the component unmounts or the effect re-runs
-        return () => clearTimeout(timeoutId);
-    }, [isConfirming, isConfirmed, isOptionPending, optionError]);
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-
-
-
         const formattedMaxPayout = (parseFloat(maxPayout) * 1e6).toString();
         const expoWiseStrikePrice = parseFloat(strikePrice) / Math.pow(10, parseInt(expo));
         const formattedPremiumCost = (parseFloat(premiumCost) * 1e6).toString();
+      
+        if (phase === 1){
+            if (isApprovalConfirmed){
+               
+                timeoutId = setTimeout(() => {
+                    setPhase(2);
+                    console.log("app confirmed, setphase2");
+                    try {
+                        writeOptionContract({
+                            address: OptionismAddress,
+                            abi: OptionismABI,
+                            functionName: 'createOption',
+                            args: [
+                                isCall,
+                                BigInt(formattedPremiumCost),
+                                BigInt(expoWiseStrikePrice),
+                                BigInt(new Date(deadline).getTime() / 1000),
+                                BigInt(new Date(expiry).getTime() / 1000),
+                                selectedPriceId as `0x${string}`,
+                                BigInt(shares),
+                                BigInt(formattedMaxPayout),
+                            ],
+                        });
+                    } catch {
+        
+                    }
+                }, 3000);
+               
+            }
+            if (approvalError){
+                setTxing(false);
+                setPhase(0);
+            }
+        }
+    }, [isApprovalPending, isApprovalConfirmed, isApprovalConfirming, approvalError]);
 
-        if (BigInt(currentAllowance) < BigInt(premiumCost) * BigInt(shares)) {
-            try {
-                writeApprovalContract({
-                    address: mockUSDCAddress,
-                    abi: mockUSDCABI,
-                    functionName: 'approve',
-                    args: [OptionismAddress as `0x${string}`, BigInt(formattedPremiumCost) * BigInt(shares)]
-                });
 
-                if (approvalError) {
+    useEffect(() => {
+        let timeoutId: NodeJS.Timeout;
 
-                    return;
-                }
+        if (phase === 2){
+              if (isOptionConfirmed){
+                  
+                timeoutId = setTimeout(() => {
+                    setPhase(0);
+                    setTxing(false);
+                    console.log("option confirmed, setphase0");
+                }, 3000);
+              }
+              if(optionError){
+                setTxing(false);
+                setPhase(0);
+              }
+        }
+        
+    }, [isOptionPending, isOptionConfirmed, isOptionConfirming, optionError]);
 
-                if (approvalTxHash) {
-                    const result = useWaitForTransactionReceipt({ hash: approvalTxHash });
-                }
-            } catch (error) {
+  
 
+    useEffect(() => {
+        
+        if (phase === 1){
+            
+        }
+        if (phase === 2){
+
+        }
+
+    }, [phase]);
+
+
+
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+       
+        const formattedMaxPayout = (parseFloat(maxPayout) * 1e6).toString();
+        
+        try {
+            writeApprovalContract({
+                address: mockUSDCAddress,
+                abi: mockUSDCABI,
+                functionName: 'approve',
+                args: [OptionismAddress as `0x${string}`, BigInt(formattedMaxPayout) * BigInt(shares)]
+            });
+            setTxing(true);
+            setPhase(1);
+            if (approvalError) {
                 return;
             }
-        }
-
-        try {
-            writeOptionContract({
-                address: OptionismAddress,
-                abi: OptionismABI,
-                functionName: 'createOption',
-                args: [
-                    isCall,
-                    BigInt(formattedPremiumCost),
-                    BigInt(expoWiseStrikePrice),
-                    BigInt(new Date(deadline).getTime() / 1000),
-                    BigInt(new Date(expiry).getTime() / 1000),
-                    selectedPriceId as `0x${string}`,
-                    BigInt(shares),
-                    BigInt(formattedMaxPayout),
-                ],
-            });
-
-            if (optionError) {
-
-            } else {
-
-            }
         } catch (error) {
-
+            return;
         }
-    };
-    useEffect(() => {
-        if (isOptionPending) {
-            console.log('Option transaction pending');
-        } else {
-            console.log('Option transaction not pending');
-        }
-    }, [isOptionPending]);
+    }
 
     // Reset form fields when selectedPriceId changes
     useEffect(() => {
@@ -240,7 +262,7 @@ const OptionForm: React.FC<OptionFormProps> = ({ selectedPriceId, selectedName, 
                         <div className="fixed top-0 right-0 w-screen h-screen flex items-center justify-center backdrop-blur-[1px] bg-tv bg-opacity-30 z-20">
                             <div className="bg-tv fixed absolute top-50 right-50 items-center text-center text-sm rounded-lg z-20 p-6 h-36 w-80">
 
-                                {!isConfirmed && !optionError ? (
+                                {(isApprovalPending || isOptionPending) && !optionError ? (
                                     <span className="loading loading-color loading-ring text-success mb-4 loading-lg"></span>
                                 ) : !optionError ? (
                                     <div className="flex mb-2 items-center justify-center">
@@ -308,36 +330,43 @@ const OptionForm: React.FC<OptionFormProps> = ({ selectedPriceId, selectedName, 
                                     </div>
                                 )}
 
-                                {txing && !isConfirming && !optionError && !isConfirmed && (
-                                    <div>Waiting for user confirmation . . .</div>
+                                {txing && (!isOptionConfirming || !isApprovalConfirming) && !optionError && (isOptionPending || isApprovalPending) && (
+                                    <div>Waiting for user to confirm . . .</div>
                                 )}
-                                {isConfirming && !optionError && (
+                                {(isOptionConfirming || isApprovalConfirming) && !optionError && (
                                     <div>Waiting for confirmation...</div>
                                 )}
 
-                                {isConfirmed && <div>Transaction confirmed.</div>}
-                                {hash && (
+                                {((isOptionConfirmed || isApprovalConfirmed) && !(isOptionPending||isApprovalPending)) && <div>Transaction confirmed.</div>}
+                                {(optionTxHash && phase ==2) && (
                                     <div className='mt-2'>
                                         <a
                                             className='bg-slate-200 border border-slate-400 p-0.5 px-1 rounded-md inline-block'
-                                            href={`https://base-sepolia.blockscout.com/tx/${hash}`}
+                                            href={`https://base-sepolia.blockscout.com/tx/${optionTxHash}`}
                                             target="_blank" rel="noopener noreferrer"
                                         >
                                             View on Explorer
                                         </a>
                                     </div>
                                 )}
+                                {(approvalTxHash && phase === 1) && (
+                                    <div className='mt-2'>
+                                        <a
+                                            className='bg-slate-200 border border-slate-400 p-0.5 px-1 rounded-md inline-block'
+                                            href={`https://base-sepolia.blockscout.com/tx/${approvalTxHash}`}
+                                            target="_blank" rel="noopener noreferrer"
+                                        >
+                                            View on Explorer
+                                        </a>
+                                    </div>
+                                )}
+
                             </div>
                         </div>
                     )}
-
                 </div>
-
             </div>
             )}
-
-
-
         </div>
     );
 };
