@@ -7,9 +7,10 @@ you can find info about the commands in their respective folders﻿.
 
 # Optionism / Ethglobals Superhack2024
 
-This project is a decentralized options trading platform that allows users to write and subscribe to options contracts based on the price movements of various assets, similar to traditional finance (TradFi) options. This target two kind of user:
+This project is a decentralized options trading platform that allows users to write and subscribe to options contracts based on the price movements of various assets, similar to traditional finance (TradFi) options. This target two kind of user + 1:
 - The writer ( Who publish the option )
 - The buyer ( Who buy a share of the option contract )
+- Gelato al Pistacchio ( The one that injects data and resoloves the option ) 
 
 Writers can create call or put options, selecting a strike price and other parameters, while buyers can subscribe by paying a premium. Upon expiration, a Gelato Web3 function automatically resolves the contract by pulling price data from Pyth (off-chain) via the Hermes REST API. The outcome is determined based on the direction of the option (call or put) and the final price of the asset. Only cash settlements are made, as the platform deals solely with derivatives and not the underlying assets themselves. This is helpful if you have no easy access to options in the real world.
 
