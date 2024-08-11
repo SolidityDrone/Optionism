@@ -1,6 +1,16 @@
-# Nexth
+# Optionism frontend
 
-A Next.js + Ethereum starter kit to quickly ship Web3 Apps ⚡
+In order to run this folder you need to:
+
+navigate to frontend/app 
+
+```yarn install```
+
+then simply
+ 
+```yarn dev```
+
+Access ```localhost:3000```
 
 ## Features ✅
 
@@ -12,13 +22,3 @@ A Next.js + Ethereum starter kit to quickly ship Web3 Apps ⚡
 - [Hardhat](https://hardhat.org/)
 - [DaisyUI](https://chakra-ui.com/)
 
-## Developer Experience 🧰
-
-- [TypeScript](https://www.typescriptlang.org/)
-- [eslint](https://eslint.org/)
-- [prettier](https://prettier.io/)
-- [Husky](https://typicode.github.io/husky/)
-
-### Smart Contracts
-
-If you want to add smart contracts to your project, check out the docs at [hardhat folder](./hardhat) or [foundry folder](./foundry).
