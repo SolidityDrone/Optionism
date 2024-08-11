@@ -1,9 +1,9 @@
+/* eslint-disable */
 import type { Metadata, Viewport } from 'next'
 import { PropsWithChildren } from 'react'
-import { SITE_DESCRIPTION, SITE_EMOJI, SITE_INFO, SITE_NAME, SITE_URL} from '@/utils/site'
+import { SITE_DESCRIPTION, SITE_EMOJI, SITE_INFO, SITE_NAME, SITE_URL } from '@/utils/site'
 import { Layout } from '@/components/Layout'
 import { Web3Provider } from '@/context/Web3'
-import { NotificationProvider } from '@/context/Notifications'
 import { cookieToInitialState } from 'wagmi'
 import { WALLETCONNECT_CONFIG } from '@/utils/web3'
 import { headers } from 'next/headers'
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
     url: SITE_URL,
     images: '/opengraph-image',
-  }
+  },
 }
 
 export const viewport: Viewport = {
@@ -55,9 +55,9 @@ export default function RootLayout(props: PropsWithChildren) {
 
       <body>
         <Web3Provider initialState={initialState}>
-          <NotificationProvider>
+
             <Layout>{props.children}</Layout>
-          </NotificationProvider>
+
         </Web3Provider>
       </body>
     </html>

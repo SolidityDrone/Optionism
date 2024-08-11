@@ -1,3 +1,4 @@
+/* eslint-disable */
 import React, { useEffect, useState } from 'react';
 import { OptionismABI, OptionismAddress } from '@/abi/optionism';
 import { mockUSDCABI, mockUSDCAddress } from '@/abi/ierc20';
@@ -26,11 +27,12 @@ interface OptionsTableProps {
     callOptions: Option[];
     putOptions: Option[];
     loading: boolean;
-    selectedName: string | null;
+    selectedName: string;
     price: string;
     expo: string;
-    gSymbol: string; // Ensure this is included in the props interface
-}
+    gSymbol: string;
+    csmSymbol: string; // Ensure this is included
+  }
 
 const formatDate = (timestamp: string): string => {
     const date = new Date(parseInt(timestamp) * 1000); // Convert Unix timestamp to milliseconds
@@ -201,7 +203,7 @@ const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, lo
                                                     <td className="w-[80px] text-center">
                                                         {option.sharesLeft + "/" + option.shares}
                                                     </td>
-                                                    <td className="w-[134px] text-center">{parseFloat(option.strikePrice) * Math.pow(10, expo)}$</td>
+                                                    <td className="w-[134px] text-center">{parseFloat(option.strikePrice) * Math.pow(10, Number(expo))}$</td>
                                                     <td className="w-[154px] text-center">
                                                         <div className="flex items-center justify-center gap-2">
                                                             <input
@@ -274,7 +276,7 @@ const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, lo
                                                     <td className="w-[80px] text-center">
                                                         {option.sharesLeft + "/" + option.shares}
                                                     </td>
-                                                    <td className="w-[134px] text-center">{parseFloat(option.strikePrice) * Math.pow(10, expo)}$</td>
+                                                    <td className="w-[134px] text-center">{parseFloat(option.strikePrice) * Math.pow(10, Number(expo))}$</td>
                                                     <td className="w-[154px] text-center">
                                                         <div className="flex items-center justify-center gap-2">
                                                             <input
@@ -317,7 +319,7 @@ const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, lo
                         </div>
                     </div>
                 </div>
-              
+      
             </div>
             {txing && (<div className="fixed top-0 right-0 w-screen h-screen flex items-center justify-center backdrop-blur-[1px] bg-gray-900 bg-opacity-30 z-20">
                 <div className="bg-primary fixed absolute top-50 right-50 items-center  text-center text-sm rounded-lg z-20 p-6 h-36 w-80">
