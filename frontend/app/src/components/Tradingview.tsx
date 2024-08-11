@@ -20,6 +20,7 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({ gSymbol }) => {
     // Function to create the TradingView widget
     function createWidget() {
       if (containerRef.current && (window as any).TradingView) {
+        console.log(gSymbol);
         new (window as any).TradingView.widget({
           autosize: false,
           symbol: `PYTH:${gSymbol}`,

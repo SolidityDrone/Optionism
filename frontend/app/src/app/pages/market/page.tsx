@@ -36,6 +36,7 @@ export default function OptionsData() {
   const [price, setPrice] = useState<String>("");
   const [expo, setExpo] = useState<String>("");
   const [GSymbol, setGSymbol] = useState<String>("");
+  const [cmsSymbol, setCmsSymbol] = useState<String>("");
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -125,10 +126,12 @@ export default function OptionsData() {
   return (
     <>
       <Sidebar
-        onSelectPriceId={(id, name, genericSymbol) => {
+        onSelectPriceId={(id, name, genericSymbol, cms) => {
           setSelectedPriceId(id);
           setSelectedName(name);
           setGSymbol(genericSymbol);
+          setCmsSymbol(cms);
+          console.log(genericSymbol, cms)
         }}
       />
       <OptionsTable
@@ -139,6 +142,7 @@ export default function OptionsData() {
         price={price.toString()}
         expo={expo}
         gSymbol={GSymbol} // Ensure this is passed correctly
+        csmSymbol={cmsSymbol}
       />
       <OptionForm
         selectedPriceId={selectedPriceId}

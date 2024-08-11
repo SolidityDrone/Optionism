@@ -9,6 +9,7 @@ interface Asset {
   symbol: string;
   priceId: string;
   generic_symbol: string;
+  cms_symbol: string;
 }
 
 interface SidebarProps {
@@ -51,10 +52,13 @@ export default function Sidebar({ onSelectPriceId }: SidebarProps) {
             const assetType: AssetType = item.attributes.asset_type as AssetType;
             const description = item.attributes.description;
             const symbol = item.attributes.symbol;
-            const priceId = "0x"+item.id;
-            const genericSymbol = item.attributes.generic_symbol;
-            const asset = { description, symbol, asset_type: assetType, priceId, generic_symbol: genericSymbol};
-            
+            const priceId = "0x" + item.id;
+            const genericSymbol = item.attributes.generic_symbol || undefined;  // Fallback if generic_symbol is not available
+            const csmSymbol = item.attributes.cqs_symbol || undefined;  // Fallback if cms_symbol is not available
+        
+        
+            const asset = { description, symbol, asset_type: assetType, priceId, generic_symbol: genericSymbol, cms_symbol: csmSymbol };
+        
             switch (assetType.toString()) {
               case 'Commodities':
                 commoditiesList.push(asset);
@@ -75,7 +79,7 @@ export default function Sidebar({ onSelectPriceId }: SidebarProps) {
                 ratesList.push(asset);
                 break;
               default:
-                console.warn(`Unknown asset type: ${assetType}`);
+            
             }
           }
         });
@@ -101,11 +105,16 @@ export default function Sidebar({ onSelectPriceId }: SidebarProps) {
     }));
   };
 
-  const handleItemClick = (priceId: string, description: string, gSymbol: string) => {
+  const handleItemClick = (priceId: string, description: string, gSymbol: string, csmSymbol: string) => {
+
    
-    onSelectPriceId(priceId, description, gSymbol);
-    setSelected(priceId);
-  
+    if(gSymbol){
+      onSelectPriceId(priceId, description, gSymbol);
+    } 
+    if(csmSymbol){
+      onSelectPriceId(priceId, description, csmSymbol);
+    }
+
   };
 
   return (
@@ -140,14 +149,14 @@ export default function Sidebar({ onSelectPriceId }: SidebarProps) {
                     <li key={index} className={`py-2 ${index > 0 ? 'border-t border-gray-500' : ''}`}>
                      {selected == asset.priceId ? (<a
                         href="#"
-                        onClick={() => handleItemClick(asset.priceId, asset.description, asset.generic_symbol)}
+                        onClick={() => handleItemClick(asset.priceId, asset.description, asset.generic_symbol, asset.cms_symbol)}
                         className="block py-2 bg-gray-700 hover:text-white transition-colors duration-200"
                       >
                         <span className="block text-[12px] ">{asset.symbol}</span>
                         <span className="block text-[8px] ">{asset.description}</span>
                       </a>) : (<a
                         href="#"
-                        onClick={() => handleItemClick(asset.priceId, asset.description, asset.generic_symbol)}
+                        onClick={() => handleItemClick(asset.priceId, asset.description, asset.generic_symbol, asset.cms_symbol)}
                         className="block py-2 hover:bg-gray-800 hover:text-white transition-colors duration-200"
                       >
                         <span className="block text-[12px] ">{asset.symbol}</span>

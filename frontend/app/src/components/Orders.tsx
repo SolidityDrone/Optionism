@@ -43,13 +43,15 @@ const formatDate = (timestamp: string): string => {
     return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
 };
 
-const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, loading, selectedName, price, expo, gSymbol }) => {
+const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, loading, selectedName, price, expo, gSymbol, csmSymbol}) => {
     const [inputValues, setInputValues] = useState<{ [key: string]: string }>({});
     const { address: user } = useAccount();
-    const [currentAllowance, setCurrentAllowance] = useState<string>('0');
+
     const [txing, setTxing] = useState<boolean>(false);
-
-
+    const [phase, setPhase] = useState<Number>(0);
+    const [selectedId, setSelectedId] = useState<string>('');
+    const [selectedPremiumCost, setSelectedPremiumCost] = useState<string>('');
+    const [selectedAmount, setSelectedAmount] = useState<string>('');
     const {
         data: approvalTxHash,
         isPending: isApprovalPending,
@@ -58,55 +60,100 @@ const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, lo
     } = useWriteContract();
 
     const {
-        data: hash,
+        data: optionTxHash,
         isPending: isOptionPending,
         error: optionError,
         writeContract: writeOptionContract,
     } = useWriteContract();
 
-    const { isLoading: isConfirming, isSuccess: isConfirmed } =
-        useWaitForTransactionReceipt({ hash });
+    const { isLoading: isOptionConfirming, isSuccess: isOptionConfirmed } =
+    useWaitForTransactionReceipt({ hash: optionTxHash });
+
+    const { isLoading: isApprovalConfirming, isSuccess: isApprovalConfirmed } =
+        useWaitForTransactionReceipt({ hash: approvalTxHash });
 
 
-    const { data: allowance } = useReadContract({
-        address: mockUSDCAddress,
-        abi: mockUSDCABI,
-        functionName: 'allowance',
-        args: [user as `0x${string}`, OptionismAddress as `0x${string}`]
-    });
+    // const { data: allowance } = useReadContract({
+    //     address: mockUSDCAddress,
+    //     abi: mockUSDCABI,
+    //     functionName: 'allowance',
+    //     args: [user as `0x${string}`, OptionismAddress as `0x${string}`]
+    // });
 
-    useEffect(() => {
-        setCurrentAllowance(allowance?.toString() || '0');
-    }, [allowance]);
-
+    
     const handleInputChange = (id: string, value: string) => {
         setInputValues(prev => ({ ...prev, [id]: value }));
     };
+
+    
     useEffect(() => {
         let timeoutId: NodeJS.Timeout;
-
-        if (isConfirming || isOptionPending) {
-            setTxing(true);
-        }
-
-        if (isConfirmed || optionError) {
-            // Set a 3-second delay before setting txing to false
-            timeoutId = setTimeout(() => {
+        
+        if (phase === 1){
+            if (isApprovalConfirmed){
+               
+                timeoutId = setTimeout(() => {
+                    setPhase(2);
+                    console.log("app confirmed, setphase2");
+                    try {
+                        writeOptionContract({
+                            address: OptionismAddress,
+                            abi: OptionismABI,
+                            functionName: 'buyOption',
+                            args: [BigInt(selectedId), BigInt(selectedAmount)],
+                        });
+    
+                        if (optionError) {
+                        } else {
+                        }
+                    } catch (error) {
+                        console.log(optionError)
+                    }
+                
+                }, 3000);
+                // Proceed with the option buy transaction
+              
+            }
+            if (approvalError){
                 setTxing(false);
-            }, 3000);
+                setPhase(0);
+            }
         }
+    }, [isApprovalPending, isApprovalConfirmed, isApprovalConfirming, approvalError]);
 
-        // Clean up the timeout if the component unmounts or the effect re-runs
-        return () => clearTimeout(timeoutId);
-    }, [isConfirming, isConfirmed, isOptionPending, optionError]);
+
+    useEffect(() => {
+        let timeoutId: NodeJS.Timeout;
+        console.log(optionError)
+        if (phase === 2){
+              if (isOptionConfirmed){
+                  
+                timeoutId = setTimeout(() => {
+                    setPhase(0);
+                    setTxing(false);
+                    console.log("option confirmed, setphase0");
+                }, 3000);
+              }
+              if(optionError){
+                setTxing(false);
+                setPhase(0);
+              }
+        }
+        
+    }, [isOptionPending, isOptionConfirmed, isOptionConfirming, optionError]);
 
     const handleSubmit = async (id: string) => {
         const amount = inputValues[id];
-   
-        if (amount) {
-            const premiumCost = (parseFloat(callOptions.find(option => option.id === id)?.premium || '0') * parseFloat(amount)).toString();
 
-            if (BigInt(currentAllowance) < BigInt(premiumCost)) {
+        if (amount) {
+         
+            const premiumCost = (parseFloat(callOptions.find(option => option.id === id)?.premium || '0') * parseFloat(amount)).toString();
+            setSelectedPremiumCost(premiumCost);
+            setSelectedId(id);
+            setSelectedAmount(amount);
+            console.log(id);
+            console.log(premiumCost);
+            console.log(amount)
                 try {
                     // Approve transaction
                     writeApprovalContract({
@@ -115,45 +162,16 @@ const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, lo
                         functionName: 'approve',
                         args: [OptionismAddress as `0x${string}`, BigInt(premiumCost)]
                     });
-
+                    setTxing(true);
+                    setPhase(1);
                     if (approvalError) {
-                        console.error('Approval Transaction Error:', approvalError);
+                  
                         return;
                     }
-
-                    // Wait for the approval transaction to be confirmed
-                    if (approvalTxHash) {
-                        useWaitForTransactionReceipt({ hash: approvalTxHash });
-                    }
-                    console.log('Allowance post ap tx', currentAllowance);
-                    console.log('Approval Transaction Hash:', approvalTxHash);
                 } catch (error) {
-                    console.error('Error executing approval transaction:', error);
                     return;
                 }
             }
-
-            // Proceed with the option buy transaction
-            try {
-                writeOptionContract({
-                    address: OptionismAddress,
-                    abi: OptionismABI,
-                    functionName: 'buyOption',
-                    args: [BigInt(id), BigInt(amount)],
-                });
-
-                if (optionError) {
-                    console.error('Transaction Error:', optionError);
-                } else {
-                    console.log('Transaction Hash:', optionTxHash);
-                    console.log('Allowance post op tx', currentAllowance);
-                }
-            } catch (error) {
-                console.error('Error executing option transaction:', error);
-            }
-        } else {
-            console.error('No amount entered.');
-        }
     };
 
     return (
@@ -308,7 +326,7 @@ const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, lo
                         <div className="fixed top-0 right-0 w-screen h-screen flex items-center justify-center backdrop-blur-[1px] bg-tv bg-opacity-30 z-20">
                             <div className="bg-tv fixed absolute top-50 right-50 items-center text-center text-sm rounded-lg z-20 p-6 h-36 w-80">
 
-                                {!isConfirmed && !optionError ? (
+                                {(isApprovalPending || isOptionPending) && !optionError ? (
                                     <span className="loading loading-color loading-ring text-success mb-4 loading-lg"></span>
                                 ) : !optionError ? (
                                     <div className="flex mb-2 items-center justify-center">
@@ -376,31 +394,41 @@ const OptionsTable: React.FC<OptionsTableProps> = ({ callOptions, putOptions, lo
                                     </div>
                                 )}
 
-                                {txing && !isConfirming && !optionError && !isConfirmed && (
-                                    <div>Waiting for user confirmation . . .</div>
+                                {txing && (!isOptionConfirming || !isApprovalConfirming) && !optionError && (isOptionPending || isApprovalPending) && (
+                                    <div>Waiting for user to confirm . . .</div>
                                 )}
-                                {isConfirming && !optionError && (
+                                {(isOptionConfirming || isApprovalConfirming) && !optionError && (
                                     <div>Waiting for confirmation...</div>
                                 )}
 
-                                {isConfirmed && <div>Transaction confirmed.</div>}
-                                {hash && (
+                                {((isOptionConfirmed || isApprovalConfirmed) && !(isOptionPending||isApprovalPending)) && <div>Transaction confirmed.</div>}
+                                {(optionTxHash && phase ==2) && (
                                     <div className='mt-2'>
                                         <a
                                             className='bg-slate-200 border border-slate-400 p-0.5 px-1 rounded-md inline-block'
-                                            href={`https://base-sepolia.blockscout.com/tx/${hash}`}
+                                            href={`https://base-sepolia.blockscout.com/tx/${optionTxHash}`}
                                             target="_blank" rel="noopener noreferrer"
                                         >
                                             View on Explorer
                                         </a>
                                     </div>
                                 )}
+                                {(approvalTxHash && phase === 1) && (
+                                    <div className='mt-2'>
+                                        <a
+                                            className='bg-slate-200 border border-slate-400 p-0.5 px-1 rounded-md inline-block'
+                                            href={`https://base-sepolia.blockscout.com/tx/${approvalTxHash}`}
+                                            target="_blank" rel="noopener noreferrer"
+                                        >
+                                            View on Explorer
+                                        </a>
+                                    </div>
+                                )}
+
                             </div>
                         </div>
                     )}
-
                 </div>
-
             </div>
             )}
         </>
