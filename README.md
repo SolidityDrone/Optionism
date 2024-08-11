@@ -1,5 +1,9 @@
-## Disclaimer
-you can find info about the commands in their respective folders﻿
+
+<img src="https://github.com/user-attachments/assets/bc9812da-3609-46a3-b226-31d30c73d64d" alt="optionism" width="100"/>
+
+
+# Disclaimer
+you can find info about the commands in their respective folders﻿.
 
 # Optionism / Ethglobals Superhack2024
 
